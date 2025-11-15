@@ -1,0 +1,49 @@
+Word-Order Trainer – High-Level Plan
+
+1. Platform & stack
+   - Browser-first web app built with React (or Preact) + TypeScript.
+   - Use Vite for fast dev/build; React Router for /library, /play/:textId, /stats/:textId.
+   - State scope: local React state per view plus a light global store (Context or Zustand) for cross-route session data.
+   - Persistence: IndexedDB via Dexie (or thin wrapper) for texts, sentences, progress, sessions.
+
+2. Sentence preprocessing
+   - Import pipeline normalizes (Unicode NFC + locale-aware lowercase), tokenizes, splits into surface/candidate tokens, and records per-sentence seeds.
+   - Store metadata: surfaceTokens[], candidateTokens[], chunk seeds, language tags.
+
+3. Core play loop
+   - Represent each row as {hand, labels, order[], expectedIndex, done[]}; serialize directly for snapshots.
+   - Deterministic shuffle via H(textId, sentenceIndex, chunkIndex, policyVersion) → seeded RNG.
+   - Conveyor animation (≤100 ms) via CSS transforms; input handler remains active during animation.
+   - Key handler maps KeyboardEvent.code to ASDF/JKL; ignore other keys & event.isComposing.
+
+4. Reveal & duplicates
+   - Maintain per-sentence revealIndex and multiset for duplicate candidates.
+   - On correct input: advance reveal pointer, update HUD metrics, flip card to “done”.
+   - Row completion promotes queued row, spawns new row with alternating hand until sentence ends.
+
+5. HUD & progress
+   - Track tokens_total, tokens_first_try_correct, mistakes_total, rows_completed, active_ms (pause-aware), and streak.
+   - Compute RPM via EMA + session average; accuracy = first-hit correct / attempts.
+   - Progress bar uses precomputed total_rows = Σ ceil(tokens/4); show ticks at sentence boundaries.
+
+6. Routing & UI
+   - Library: pointer-only controls (Play/Continue, Stats, Import, Restart/Delete); empty state messaging.
+   - Play: top bar (Home, title, Pause), faint full-sentence reveal line, two-row layout with fixed 2-line card height, always-on HUD, pause sheet with Resume/Quit/Session stats.
+   - Stats: per-text aggregates (accuracy, RPM, optional sparkline).
+
+7. Persistence & resume
+   - On Pause/Home, snapshot {sentenceIndex, revealIndex, topRow, bottomRow, HUD counters} before navigation; Continue restores identically.
+   - IndexedDB schema versions stored with policyVersion for deterministic recompute.
+
+8. Typography & overflow
+   - Cards: 4 equal columns, start-aligned text, dir="auto", hyphens:auto, 2-line height.
+   - Scale row font to 0.9 if needed; otherwise apply grapheme-aware middle ellipsis (head/tail bounds) before fallback to end ellipsis.
+
+9. Development flow
+   1. Scaffold project + routing + Dexie schema.
+   2. Implement importer/token normalization with unit tests.
+   3. Build Play loop with mock data, then integrate real storage.
+   4. Add HUD metrics, pause/resume snapshotting, IME guard.
+   5. Implement Library & Stats screens hooked to IndexedDB.
+   6. Polish typography/animation, ensure acceptance checklist compliance.
+   7. Add automated tests (unit for normalization/shuffle, integration for Play loop) and manual QA checklist.

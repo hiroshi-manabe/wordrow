@@ -1,0 +1,110 @@
+Word‑Order Trainer — v0.6 MVP Spec (global 2‑line height, stable labels, conveyor push‑up)
+Goal: Train rapid word‑order recognition for space‑separated languages (EN/DE first) using two visible rows and home‑row keys. Rows keep their own labels so the user can mentally rehearse the next row while typing the current one. Global 2‑line row height keeps vertical rhythm constant between ASDF and JKL; rows. Keyboard‑first, offline‑first.
+
+Core loop
+* Two rows visible: Top = live, Bottom = queued.
+* Stable per‑row labels: a row is created with a hand and keeps it through completion.
+    * LEFT → A S D F
+    * RIGHT → J K L ;
+* Alternation: rows alternate hands.
+* Conveyor push‑up: when the top row completes, the bottom row slides up (keeps labels/hand) to become the new top; a fresh bottom row spawns with the opposite hand.
+* Ultra‑fast animation: 80–100 ms push‑up; input remains enabled during the slide; the newly promoted row is immediately hot.
+Sentence model & reveal
+* No cross‑sentence chunks. New two‑row cycle per sentence.
+* Progressive reveal: show the full surface sentence at ~5–10% opacity (barely legible). On each correct key, reveal the next surface span (token + trailing punctuation/space) in solid black.
+* Surface vs Candidate forms (per sentence):
+    * Surface tokens: original orthography (casing + punctuation) for reveal.
+    * Candidate tokens: normalized for matching:
+        * Unicode NFC, then locale‑aware lowercase using the text’s language tag with toLocaleLowerCase (pass [langFull, langBase]).
+        * Strip leading and trailing Unicode punctuation/symbols; keep internal apostrophes and hyphens (including typographic forms). Do not strip combining marks.
+* Duplicates are fungible: if the next expected candidate equals multiple visible cards, any matching label is accepted; the remaining occurrence(s) then satisfy the next expected positions.
+Chunk size & shuffle (MVP fixed chunk=4)
+* Render N cards where N ∈ {1,2,3,4} depending on remaining tokens in the sentence. Use only the first N keys of the row’s hand (e.g., N=2 → A,S on LEFT or J,K on RIGHT).
+* Shuffle policy by N:
+    * N=1: identity (trivial). Equality with original is allowed.
+    * N=2: uniform shuffle without the “not‑equal” check (otherwise it degenerates to always‑reverse).
+    * N=3/4: Fisher–Yates with re‑roll if equal to original order (guarantee ≥1 displacement).
+Keyboard, input & controls
+* Accepted keys during play: ASDF / JKL; (by KeyboardEvent.code) and Space (Pause/Resume).
+* Pointer policy (revised): while playing, only two buttons are clickable:
+    * Home (go back to Library; autosave exact snapshot for resume)
+    * Pause (same as Space)
+All other UI is non‑interactive during play (cards, HUD, progress bar, etc.).
+* Focus management: Home/Pause are pointer‑only (tabindex=-1) so they never steal typing focus. In Pause, pointer remains the only way to activate buttons.
+* Mistake semantics: a mistake is any non‑expected keypress in the live row. On mistake: increment mistakes_total, do not advance reveal, and reset Streak for that row.
+* Snapshot timing: on Pause or Home, persist the snapshot before UI transition so Continue resumes exactly.
+* IME safety: ignore input while event.isComposing === true.
+* Backspace undo: not supported in MVP.
+* No tap UI for tokens (keyboard‑only even on mobile with BT keyboard).
+Screens & flow
+Routes: /library → /play/:textId → /stats/:textId
+Library (Text list)
+* Top bar: app name; Settings (disabled placeholder); Import.
+* Tiles: Title, status (Not started / In progress / Completed), progress (% rows), last played time.
+    * Primary: Play (new or completed → from 0) / Continue (in progress)
+    * Secondary: Stats (opens Per‑text Overview)
+    * Overflow: Restart (clear progress), Delete (confirm). (Export later.)
+* Navigation: Stats opens /stats/:textId as a page (not a modal); Back returns to Library with selection preserved and focus restored to the same tile.
+* Empty state: “Import a text to begin” with drag‑and‑drop.
+* Input policy (Library): pointer‑only UI; no custom keyboard shortcuts. Native accessibility activation (Tab → Enter/Space) is supported but not advertised.
+Play
+* Top bar: Home (icon, top‑left, clickable even during play), title; Pause (icon, top‑right; clickable and Space‑toggle).
+* Global progress: thin row‑based bar with faint sentence tick marks; always‑visible compact text next to it (non‑interactive), e.g. 37% · 128/342 rows. Updates on row completion only.
+* Main area: context line with progressive reveal; two rows (top live ASDF, bottom queued JKL;). On top completion → push‑up (≤100 ms), new bottom slides in; input never disabled.
+* HUD (always on): minimal, top‑right: Accuracy, RPM, Streak.
+* Pause sheet (Space or Pause button): Resume, Quit to Library (Home), Session stats (Accuracy, RPM only). No sentence counts in MVP.
+Global progress details
+* Precompute: total_rows = Σ_s ceil(len(sentence_s)/4).
+* Maintain per‑sentence max row completed; global fill = Σ_s max_row_completed_s / total_rows.
+* Ticks at cumulative row indices (sentence boundaries). Crossing a tick may glow briefly.
+* Fill never decreases within a session (restarts don’t subtract progress).
+Import text spec (MVP)
+* Encoding: UTF‑8 (BOM OK). Normalize line endings.
+* Header:
+    * Line 1 = Title (verbatim; not tokenized).
+    * Line 2 optional = lang=... (any BCP‑47 tag, case‑insensitive).
+        * Parsing tolerance: allow leading/trailing spaces around lang=; if a line begins with lang=, treat the remainder of that line as the language tag.
+        * Canonicalization: use Intl.getCanonicalLocales. On failure, fallback to en.
+        * If Line 2 starts with lang=, sentences begin at Line 3 (even if the tag falls back to en). If Line 2 does not start with lang=, default to en and treat Line 2 as sentence 1.
+* Lines after header = Sentences: User‑segmented; the system does no sentence splitting.
+* Whitespace tokenization: split on Unicode whitespace only.
+    * don't ⇒ 1 token; in spite of ⇒ 3 tokens.
+    * Hyphenated chains stay 1 token: no-good-dirty-rotten-pig-stealing-great-great-grandfather ⇒ 1 token.
+* Rendering: set lang on row/cards to the full tag; set dir="auto"; enable hyphens:auto (when the browser provides patterns). Fallback ladder (wrap → 0.9 scale → middle ellipsis) ensures 2‑line fit even without hyphenation.
+Typography & long token policy (MVP)
+* Card layout: 4 equal‑width columns; global 2‑line card height for every row.
+* Vertical alignment: token text is centered vertically within each card.
+* Horizontal alignment: token text is start‑aligned (text-align: start) and respects directionality via dir="auto"; do not center horizontally.
+* Hyphenation & wrap: set lang per text; enable hyphens:auto (when available); wrap only inside a card.
+* Overflow detection: with fixed 2‑line height, a token overflows if scrollHeight > clientHeight in the offscreen measure pass.
+* Row font scaling: row‑uniform scale only if needed:
+    * Try s_row = 1.0; if any token would exceed 2 lines → s_row = 0.9.
+    * If still too tall at 0.9 → apply grapheme‑aware middle ellipsis.
+* Middle‑ellipsis bounds: start with head=18, tail=7 graphemes; floors head≥8, tail≥6; ≤6 shaping iterations (shrink head by 2, then tail by 1). If still overflowing, use end‑ellipsis as a last resort. Prefer cuts near hyphens when present.
+* Display vs matching: shaping is display‑only; matching uses the unshaped candidate.
+Stats (MVP‑minimal)
+* In‑play HUD (always on):
+    * Accuracy (first‑try) = first‑hit correct ÷ tokens attempted (session).
+    * RPM (rows per minute, excludes paused time). Exact: RPM_session = rows_completed / (active_ms / 60000). HUD may show an EMA of per‑row RPM (α≈0.2) updated on row completion; the session sheet shows the session average.
+    * Streak = consecutive perfect rows (no wrong keys in the row).
+* Session summary (Pause → Session stats): show Accuracy and RPM only. No keys, no IKI, no sentence counts, no replay, no export.
+* Per‑text Overview (from Library → Stats): lifetime Accuracy and RPM; optional tiny sparklines (last 10 sessions). Nothing else.
+* Logging: store per‑session counters only (tokens_total, tokens_first_try_correct, rows_completed, sentences_completed, mistakes_total, active_ms, started_at/ended_at, rpm_session_avg, accuracy_session). Append session summaries to the text’s history and maintain lifetime aggregates.
+Persistence & determinism
+* Storage (IndexedDB):
+    * texts { id, title, langFull, langBase, contentHash, createdAt, updatedAt, sentencesCount, policyVersion }
+    * sentences { textId, index, surfaceTokens[], candidateTokens[], seed }
+    * progress { textId, sentenceIndex, revealIndex, ptr, rowSnapshots }
+    * sessions (per text) = rolling list of minimal session summaries + lifetime aggregates.
+* rowSnapshots (belt‑and‑suspenders): for top and bottom rows persist: hand, order[], expected, done[], and labels.
+* Seeds: H(textId, sentenceIndex, chunkIndex, policyVersion) to allow deterministic recompute.
+* Resume correctness (N‑agnostic): restore the same rows, order, labels, and reveal state from snapshots or seeds.
+Acceptance checklist
+* Library: pointer‑only UI; no custom keyboard shortcuts; Stats opens Per‑text Overview (/stats/:textId) as a page; Back returns to Library with selection preserved and focus restored to the same tile.
+* Controls: In play, only ASDF/JKL; and Space keys are accepted; Pause and Home buttons are clickable; everything else non‑interactive.
+* Autosave on Home: leaving Play saves an exact snapshot so Continue resumes identically.
+* HUD: Accuracy/RPM/Streak always visible; numbers update on correct events; no focus steal.
+* Progress bar: row‑based fill; ticks at sentence boundaries; compact text (e.g., 37% · 128/342 rows) always visible; never decreases within a session.
+* Play: chunk size fixed at 4; labels stable per row; hands alternate; progressive reveal; duplicates fungible; push‑up ≤100 ms; input accepted during animation.
+* Layout uniformity: global 2‑line card height; text vertically centered and horizontally start‑aligned (direction‑aware); no row exceeds 2 lines; scaling only to 0.9, then ellipsis if needed.
+* Import: title + optional lang=... header; user‑segmented sentences; whitespace tokenization; hyphen/apostrophe rules as above; invalid/missing lang → default en (header still consumes line 2 if it starts with lang=).
