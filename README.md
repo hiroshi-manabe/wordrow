@@ -1,25 +1,35 @@
-# Word-Order Trainer MVP
+# Word-Order Trainer
 
-Word-Order Trainer is a keyboard-first practice tool that teaches rapid word-order recognition for space-separated languages (starting with English/German). Players type shuffled token groups using home-row keys as sentences are progressively revealed, training speed and accuracy without leaving the keyboard.
+A keyboard-first practice tool that teaches rapid word-order recognition for space-separated languages. This repo contains the new Vite + React + TypeScript client plus the design docs that define the MVP.
 
-## Current Scope
-- Two-row playfield with conveyor “push-up” animation: live top row, queued bottom row, alternating hands.
-- Progressive reveal of the full surface sentence while typing normalized candidate tokens (handles casing, punctuation trimming, NFC normalization).
-- Duplicate tokens are fungible, mistakes reset the row streak, and input stays enabled during ultra-fast animations.
-- Fixed chunk size of four tokens per row (shrinks only for tail fragments) with deterministic shuffle policies.
-- Pointer-only UI outside the keyboard controls: only Home and Pause buttons stay clickable during play; Library/Stats screens rely on pointer interactions.
-- Strict typography system (global two-line row height, start-aligned text, hyphenation per language, row-wide scale + ellipsis fallback) to keep layout stable.
-
-## Repository Contents
-- `spec.txt` — Full v0.6 MVP specification describing gameplay, UX, typography, persistence, and acceptance criteria.
-- `high_level_plan.txt` — Technical plan covering stack choices, data modeling, play-loop architecture, and development steps.
-- `README.md` — This overview.
-
-## Development Plan
-The implementation will follow the phases defined in `high_level_plan.txt`, starting from project scaffolding (React + TypeScript + Vite), IndexedDB schema setup, importer/token normalization, and the core play loop, then layering HUD/progress logic, persistence, Library/Stats UI, typography polish, and automated/manual verification.
+## Tech Stack
+- React 19 with TypeScript and Vite 7
+- ESLint (flat config) + Prettier for linting/formatting
+- Node.js >= 20.19.0 (managed locally via `nodebrew`)
 
 ## Getting Started
-Project scaffolding has not been generated yet. Follow the development plan to initialize the application (e.g., `npm create vite@latest wordrow -- --template react-ts`), then port the spec/plan documents into the app repository and begin implementing the game loop.
+```bash
+npm install
+npm run dev
+```
 
-## License
-TBD.
+Additional scripts:
+- `npm run build` – type-checks and bundles the production site
+- `npm run preview` – serves the production build locally
+- `npm run lint` – ESLint with zero-warning enforcement
+- `npm run typecheck` – standalone TypeScript compile with `--noEmit`
+- `npm run format` – Prettier formatting pass across the repo
+- `npm run test` – Vitest unit tests (jsdom environment)
+
+## Documentation
+The original design materials live in [`docs/`](docs):
+- [`docs/spec.txt`](docs/spec.txt) – v0.6 MVP gameplay/UX spec
+- [`docs/high_level_plan.txt`](docs/high_level_plan.txt) – implementation plan and sequencing
+- [`docs/README.md`](docs/README.md) – product overview and repository map
+
+These docs stay source-of-truth as we implement the importer, play loop, HUD, persistence, and stat views.
+
+## Next Steps
+1. Build the play-route scaffolding: load a text + sentences from Dexie, show context reveal + two-row layout with mocked row data.
+2. Implement the deterministic chunk pipeline (4-token groups, shuffle policies, duplicate handling) that will later feed the live keyboard loop.
+3. Add HUD/progress placeholders plus snapshot wiring so the Play view can eventually persist session data and drive the Stats screen.
