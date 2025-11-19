@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import type { ChunkRow } from '../chunker'
+import { retargetRowForMode } from '../chunker'
+import type { InputMode } from '../../settings/types'
 
 export interface HudCounters {
   tokensTotal: number
@@ -35,6 +37,7 @@ interface PlaySessionActions {
   handleInput: (label: string) => void
   pause: () => void
   resume: () => void
+  applyInputMode: (mode: InputMode) => void
   reset: () => void
 }
 
@@ -202,5 +205,12 @@ export const usePlaySessionStore = create<PlaySessionState & PlaySessionActions>
   },
   pause: () => set((state) => (state.status === 'ready' ? { ...state, status: 'paused' } : state)),
   resume: () => set((state) => (state.status === 'paused' ? { ...state, status: 'ready' } : state)),
+  applyInputMode: (mode: InputMode) =>
+    set((state) => ({
+      ...state,
+      liveRow: retargetRowForMode(state.liveRow, mode),
+      queuedRow: retargetRowForMode(state.queuedRow, mode),
+      pendingRows: state.pendingRows.map((row) => retargetRowForMode(row, mode)!) as ChunkRow[],
+    })),
   reset: () => set(initialState),
 }))

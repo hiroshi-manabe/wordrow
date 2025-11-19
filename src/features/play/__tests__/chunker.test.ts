@@ -9,7 +9,7 @@ describe('buildChunksForSentence', () => {
   }
 
   it('chunks tokens into alternating hands with deterministic order', () => {
-    const rows = buildChunksForSentence(baseSentence, { policyVersion: 1 })
+    const rows = buildChunksForSentence(baseSentence, { policyVersion: 1, inputMode: 'both' })
 
     expect(rows).toHaveLength(2)
     expect(rows[0].hand).toBe('left')
@@ -20,7 +20,7 @@ describe('buildChunksForSentence', () => {
 
     expect(rows[0].order).not.toEqual(rows[0].expectedOrder)
 
-    const rerun = buildChunksForSentence(baseSentence, { policyVersion: 1 })
+    const rerun = buildChunksForSentence(baseSentence, { policyVersion: 1, inputMode: 'both' })
     expect(rerun[0].order).toEqual(rows[0].order)
     expect(rerun[1].order).toEqual(rows[1].order)
   })
@@ -32,7 +32,7 @@ describe('buildChunksForSentence', () => {
       seed: 42,
     }
 
-    const rows = buildChunksForSentence(tinySentence, { policyVersion: 1 })
+    const rows = buildChunksForSentence(tinySentence, { policyVersion: 1, inputMode: 'both' })
     expect(rows[0].order).toEqual([0])
     expect(rows[0].expectedOrder).toEqual([0])
   })
@@ -44,7 +44,7 @@ describe('buildChunksForSentence', () => {
       seed: 1,
     }
 
-    expect(() => buildChunksForSentence(broken, { policyVersion: 1 })).toThrow(
+    expect(() => buildChunksForSentence(broken, { policyVersion: 1, inputMode: 'both' })).toThrow(
       /must match in length/i,
     )
   })

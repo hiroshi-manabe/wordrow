@@ -1,8 +1,11 @@
+import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link } from 'react-router-dom'
 import TextImportPanel from '../components/TextImportPanel'
 import type { TextRecord } from '../storage/db'
 import { db } from '../storage/db'
+import { useSettingsStore } from '../features/settings/store'
+import type { InputMode } from '../features/settings/types'
 import { deleteTextById } from '../storage/delete-text'
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, {
@@ -12,11 +15,12 @@ const dateFormatter = new Intl.DateTimeFormat(undefined, {
 
 export default function LibraryRoute() {
   const texts = useLiveQuery(() => db.texts.orderBy('updatedAt').reverse().toArray(), [])
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   return (
     <div className="library-grid">
       <section className="section-card">
-        <header className="section-header">
+        <header className="section-header library-header">
           <div>
             <p className="eyebrow">Library</p>
             <h2>Your texts</h2>
@@ -25,10 +29,14 @@ export default function LibraryRoute() {
             Import a text to begin practicing word-order recall. Each line becomes a sentence and
             stays deterministic thanks to per-sentence seeds.
           </p>
+          <button type="button" className="ghost-button" onClick={() => setSettingsOpen(true)}>
+            Settings
+          </button>
         </header>
         {renderLibraryContents(texts)}
       </section>
       <TextImportPanel />
+      {settingsOpen ? <SettingsModal onClose={() => setSettingsOpen(false)} /> : null}
     </div>
   )
 }
@@ -65,6 +73,57 @@ function renderLibraryContents(texts: TextRecord[] | undefined) {
         </li>
       ))}
     </ul>
+  )
+}
+
+function SettingsModal({ onClose }: { onClose: () => void }) {
+  const inputMode = useSettingsStore((state) => state.inputMode)
+  const setInputMode = useSettingsStore((state) => state.setInputMode)
+
+  const handleChange = (mode: InputMode) => {
+    setInputMode(mode)
+  }
+
+  return (
+    <div className="modal-overlay" role="dialog" aria-modal="true">
+      <div className="modal-sheet">
+        <h3>Settings</h3>
+        <div className="settings-options">
+          <label>
+            <input
+              type="radio"
+              name="input-mode"
+              checked={inputMode === 'both'}
+              onChange={() => handleChange('both')}
+            />
+            Both hands (alternating rows)
+          </label>
+          <label>
+            <input
+              type="radio"
+              name="input-mode"
+              checked={inputMode === 'left'}
+              onChange={() => handleChange('left')}
+            />
+            Left hand only (ASDF)
+          </label>
+          <label>
+            <input
+              type="radio"
+              name="input-mode"
+              checked={inputMode === 'right'}
+              onChange={() => handleChange('right')}
+            />
+            Right hand only (JKL;)
+          </label>
+        </div>
+        <div className="modal-actions">
+          <button type="button" className="primary-button" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 

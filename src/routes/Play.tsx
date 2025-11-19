@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { buildChunksForSentence, CHUNK_SIZE, type ChunkRow } from '../features/play/chunker'
 import { usePlaySessionStore, type HudCounters } from '../features/play/state/session'
+import { useSettingsStore } from '../features/settings/store'
 import { db, STORAGE_POLICY_VERSION, type SentenceRecord, type TextRecord } from '../storage/db'
 
 interface PlayData {
@@ -38,7 +39,9 @@ export default function PlayRoute() {
   const pause = usePlaySessionStore((state) => state.pause)
   const resume = usePlaySessionStore((state) => state.resume)
   const resetSession = usePlaySessionStore((state) => state.reset)
+  const applyInputMode = usePlaySessionStore((state) => state.applyInputMode)
   const mistakeVersion = usePlaySessionStore((state) => state.mistakeVersion)
+  const inputMode = useSettingsStore((state) => state.inputMode)
 
   const data = useLiveQuery(async (): Promise<PlayData | undefined> => {
     if (!textId) return undefined
@@ -80,10 +83,18 @@ export default function PlayRoute() {
       resetSession()
     }
   }, [resetSession])
+
+  useEffect(() => {
+    applyInputMode(inputMode)
+  }, [applyInputMode, inputMode])
   useEffect(() => {
     if (!sentenceKey || !activeSentence) {
       if (lastBootstrapKey.current !== undefined) {
-        bootstrap([], { sentenceIndex: 0, totalRows: totalRowBudget, totalTokens: totalTokenBudget })
+        bootstrap([], {
+          sentenceIndex: 0,
+          totalRows: totalRowBudget,
+          totalTokens: totalTokenBudget,
+        })
         resetBootstrap()
       }
       return
@@ -96,7 +107,7 @@ export default function PlayRoute() {
         candidateTokens: activeSentence.candidateTokens,
         seed: activeSentence.seed,
       },
-      { policyVersion: STORAGE_POLICY_VERSION },
+      { policyVersion: STORAGE_POLICY_VERSION, inputMode },
     )
     const currentIndex = sentences.findIndex((s) => s.index === activeSentence.index)
     bootstrap(rows, {
@@ -104,7 +115,7 @@ export default function PlayRoute() {
       totalRows: totalRowBudget,
       totalTokens: totalTokenBudget,
     })
-  }, [activeSentence, bootstrap, sentenceKey, sentences, totalRowBudget, totalTokenBudget])
+  }, [activeSentence, bootstrap, inputMode, sentenceKey, sentences, totalRowBudget, totalTokenBudget])
 
   useEffect(() => {
     if (!sentences.length) return
@@ -119,13 +130,13 @@ export default function PlayRoute() {
         candidateTokens: nextSentence.candidateTokens,
         seed: nextSentence.seed,
       },
-      { policyVersion: STORAGE_POLICY_VERSION },
+      { policyVersion: STORAGE_POLICY_VERSION, inputMode },
     )
     const nextKey = `${textId ?? 'unknown'}-${nextSentence.index}-${nextSentence.seed}`
     if (lastBootstrapKey.current === nextKey) return
     lastBootstrapKey.current = nextKey
     bootstrap(rows, { sentenceIndex: nextIndex, totalRows: totalRowBudget, totalTokens: totalTokenBudget })
-  }, [bootstrap, sentenceIndex, sentences, status, textId, totalRowBudget, totalTokenBudget])
+  }, [bootstrap, inputMode, sentenceIndex, sentences, status, textId, totalRowBudget, totalTokenBudget])
 
   useEffect(() => {
     if (status !== 'ready') return
@@ -239,11 +250,11 @@ export default function PlayRoute() {
         </div>
       </footer>
       {status === 'paused' ? (
-        <div className="pause-overlay" role="dialog" aria-modal="true">
-          <div className="pause-sheet">
+        <div className="modal-overlay" role="dialog" aria-modal="true">
+          <div className="modal-sheet">
             <h3>Paused</h3>
             <p className="muted">Press Space or Resume to continue.</p>
-            <div className="pause-actions">
+            <div className="modal-actions">
               <button type="button" className="primary-button" onClick={resume}>
                 Resume
               </button>

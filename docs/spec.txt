@@ -1,12 +1,13 @@
-Word‑Order Trainer — v0.6 MVP Spec (global 2‑line height, stable labels, conveyor push‑up)
+Word‑Order Trainer — v0.7 Spec (global 2‑line height, stable labels, conveyor push‑up)
 Goal: Train rapid word‑order recognition for space‑separated languages (EN/DE first) using two visible rows and home‑row keys. Rows keep their own labels so the user can mentally rehearse the next row while typing the current one. Global 2‑line row height keeps vertical rhythm constant between ASDF and JKL; rows. Keyboard‑first, offline‑first.
 
 Core loop
 * Two rows visible: Top = live, Bottom = queued.
 * Stable per‑row labels: a row is created with a hand and keeps it through completion.
+    * Both‑hands mode → alternating LEFT/RIGHT rows (default)
     * LEFT → A S D F
     * RIGHT → J K L ;
-* Alternation: rows alternate hands.
+* Alternation: rows alternate hands in both‑hands mode. In single‑hand modes every row uses the configured hand.
 * Conveyor push‑up: when the top row completes, the bottom row slides up (keeps labels/hand) to become the new top; a fresh bottom row spawns with the opposite hand.
 * Ultra‑fast animation: 80–100 ms push‑up; input remains enabled during the slide; the newly promoted row is immediately hot.
 Sentence model & reveal
@@ -25,7 +26,7 @@ Chunk size & shuffle (MVP fixed chunk=4)
     * N=2: uniform shuffle without the “not‑equal” check (otherwise it degenerates to always‑reverse).
     * N=3/4: Fisher–Yates with re‑roll if equal to original order (guarantee ≥1 displacement).
 Keyboard, input & controls
-* Accepted keys during play: ASDF / JKL; (by KeyboardEvent.code) and Space (Pause/Resume).
+* Accepted keys during play: limited to the active input mode (ASDF‑only, JKL;‑only, or alternating both‑hands) plus Space (Pause/Resume).
 * Pointer policy (revised): while playing, only two buttons are clickable:
     * Home (go back to Library; autosave exact snapshot for resume)
     * Pause (same as Space)
@@ -39,7 +40,7 @@ All other UI is non‑interactive during play (cards, HUD, progress bar, etc.).
 Screens & flow
 Routes: /library → /play/:textId → /stats/:textId
 Library (Text list)
-* Top bar: app name; Settings (disabled placeholder); Import.
+* Top bar: app name; Settings (opens global preferences); Import.
 * Tiles: Title, status (Not started / In progress / Completed), progress (% rows), last played time.
     * Primary: Play (new or completed → from 0) / Continue (in progress)
     * Secondary: Stats (opens Per‑text Overview)
@@ -47,12 +48,14 @@ Library (Text list)
 * Navigation: Stats opens /stats/:textId as a page (not a modal); Back returns to Library with selection preserved and focus restored to the same tile.
 * Empty state: “Import a text to begin” with drag‑and‑drop.
 * Input policy (Library): pointer‑only UI; no custom keyboard shortcuts. Native accessibility activation (Tab → Enter/Space) is supported but not advertised.
+* Settings sheet: global “Input mode” selector with three options—Both hands (default, alternating rows), Left hand only (ASDF), Right hand only (JKL;). Changing the mode updates the next Play session immediately (even if a paused session exists); historical runs and stats do not store mode metadata.
 Play
 * Top bar: Home (icon, top‑left, clickable even during play), title; Pause (icon, top‑right; clickable and Space‑toggle).
 * Global progress: thin row‑based bar with faint sentence tick marks; always‑visible compact text next to it (non‑interactive), e.g. 37% · 128/342 rows. Updates on row completion only.
 * Main area: context line with progressive reveal; two rows (top live ASDF, bottom queued JKL;). On top completion → push‑up (≤100 ms), new bottom slides in; input never disabled.
 * HUD (always on): minimal, top‑right: Accuracy, RPM, Streak.
 * Pause sheet (Space or Pause button): Resume, Quit to Library (Home), Session stats (Accuracy, RPM only). No sentence counts in MVP.
+* Input mode awareness: every row renders with the labels determined by the active mode. Switching modes while paused immediately rewires the key handler; a resumed session continues with the new mode instead of the previous one.
 Global progress details
 * Precompute: total_rows = Σ_s ceil(len(sentence_s)/4).
 * Maintain per‑sentence max row completed; global fill = Σ_s max_row_completed_s / total_rows.

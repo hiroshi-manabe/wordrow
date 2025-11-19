@@ -1,4 +1,5 @@
 import type { Hand } from '../../storage/db'
+import type { InputMode } from '../settings/types'
 
 export const CHUNK_SIZE = 4
 
@@ -31,6 +32,7 @@ export interface SentenceTokens {
 export interface ChunkOptions {
   chunkSize?: number
   policyVersion: number
+  inputMode: InputMode
 }
 
 export function buildChunksForSentence(
@@ -41,7 +43,7 @@ export function buildChunksForSentence(
   const rows: ChunkRow[] = []
   const { surfaceTokens, candidateTokens, seed } = sentence
   let cursor = 0
-  let hand: Hand = 'left'
+  const mode = options.inputMode
 
   if (surfaceTokens.length !== candidateTokens.length) {
     throw new Error('Surface tokens and candidate tokens must match in length.')
@@ -58,6 +60,7 @@ export function buildChunksForSentence(
       })
     }
 
+    const hand = resolveHandForMode(rows.length, mode)
     const labels = HAND_KEY_MAP[hand].slice(0, size)
     const expectedOrder = tokens.map((_, index) => index)
     const shuffledOrder = shuffleOrder(
@@ -75,10 +78,27 @@ export function buildChunksForSentence(
     })
 
     cursor += size
-    hand = hand === 'left' ? 'right' : 'left'
   }
 
   return rows
+}
+
+export function retargetRowForMode(row: ChunkRow | undefined, mode: InputMode): ChunkRow | undefined {
+  if (!row) return row
+  const hand = resolveHandForMode(row.chunkIndex, mode)
+  if (hand === row.hand) return row
+  return {
+    ...row,
+    hand,
+    labels: HAND_KEY_MAP[hand].slice(0, row.tokens.length),
+  }
+}
+
+function resolveHandForMode(chunkIndex: number, mode: InputMode): Hand {
+  if (mode === 'both') {
+    return chunkIndex % 2 === 0 ? 'left' : 'right'
+  }
+  return mode
 }
 
 function shuffleOrder(order: number[], seed: number): number[] {

@@ -14,7 +14,7 @@ Word-Order Trainer – High-Level Plan
    - Represent each row as {hand, labels, order[], expectedIndex, done[]}; serialize directly for snapshots.
    - Deterministic shuffle via H(textId, sentenceIndex, chunkIndex, policyVersion) → seeded RNG.
    - Conveyor animation (≤100 ms) via CSS transforms; input handler remains active during animation.
-   - Key handler maps KeyboardEvent.code to ASDF/JKL; ignore other keys & event.isComposing.
+   - Key handler maps KeyboardEvent.code to the currently selected mode (ASDF‑only, JKL;‑only, or alternating); ignore other keys & event.isComposing.
 
 4. Reveal & duplicates
    - Maintain per-sentence revealIndex and multiset for duplicate candidates.
@@ -27,7 +27,7 @@ Word-Order Trainer – High-Level Plan
    - Progress bar uses precomputed total_rows = Σ ceil(tokens/4); show ticks at sentence boundaries.
 
 6. Routing & UI
-   - Library: pointer-only controls (Play/Continue, Stats, Import, Restart/Delete); empty state messaging.
+   - Library: pointer-only controls (Play/Continue, Stats, Import, Restart/Delete, Settings modal toggle); empty state messaging.
    - Play: top bar (Home, title, Pause), faint full-sentence reveal line, two-row layout with fixed 2-line card height, always-on HUD, pause sheet with Resume/Quit/Session stats.
    - Stats: per-text aggregates (accuracy, RPM, optional sparkline).
 
@@ -45,5 +45,6 @@ Word-Order Trainer – High-Level Plan
    3. Build Play loop with mock data, then integrate real storage.
    4. Add HUD metrics, pause/resume snapshotting, IME guard.
    5. Implement Library & Stats screens hooked to IndexedDB.
+   5a. Implement global Settings modal for input-mode selection, persisted between sessions.
    6. Polish typography/animation, ensure acceptance checklist compliance.
    7. Add automated tests (unit for normalization/shuffle, integration for Play loop) and manual QA checklist.
