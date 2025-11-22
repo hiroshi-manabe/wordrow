@@ -107,12 +107,16 @@ export default function PlayRoute() {
     }
     const target = tokenRefs.current[sentenceRevealCount - 1]
     if (target) {
-      const top = target.offsetTop
-      const desired = Math.max(0, top - windowEl.clientHeight / 2)
-      if (typeof windowEl.scrollTo === 'function') {
-        windowEl.scrollTo({ top: desired, behavior: 'smooth' })
-      } else {
-        windowEl.scrollTop = desired
+      const targetTop = target.offsetTop
+      const currentTop = windowEl.scrollTop
+      const lineHeight = target.clientHeight || 24
+      if (targetTop >= currentTop + lineHeight) {
+        const desired = targetTop
+        if (typeof windowEl.scrollTo === 'function') {
+          windowEl.scrollTo({ top: desired, behavior: 'smooth' })
+        } else {
+          windowEl.scrollTop = desired
+        }
       }
     }
   }, [sentenceRevealCount, sentenceIndex])
