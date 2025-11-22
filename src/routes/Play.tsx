@@ -110,14 +110,8 @@ export default function PlayRoute() {
       const windowRect = windowEl.getBoundingClientRect()
       const tokenRect = target.getBoundingClientRect()
       const delta = tokenRect.top - windowRect.top
-      const lineHeight = (target.clientHeight || 24) + 4
-      let desired = windowEl.scrollTop
-      if (delta >= lineHeight) {
-        desired = windowEl.scrollTop + (delta - lineHeight / 2)
-      } else if (delta < 0) {
-        desired = Math.max(0, windowEl.scrollTop + delta)
-      }
-      if (desired !== windowEl.scrollTop) {
+      if (Math.abs(delta) > 1) {
+        const desired = Math.max(0, windowEl.scrollTop + delta)
         if (typeof windowEl.scrollTo === 'function') {
           windowEl.scrollTo({ top: desired, behavior: 'smooth' })
         } else {
