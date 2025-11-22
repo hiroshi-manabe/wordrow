@@ -306,24 +306,28 @@
 .play-context__window {
   margin-top: 0.4rem;
   height: 3.5rem;
-  overflow: hidden;
+  overflow: auto;
+  scrollbar-width: none;
+}
+
+.play-context__window::-webkit-scrollbar {
+  display: none;
 }
 
 .context-scroll {
   display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  transition: transform 200ms ease;
+  flex-wrap: wrap;
+  gap: 0.35rem;
 }
 
-.context-line {
-  margin: 0;
+.context-token {
   font-size: 1.15rem;
-  line-height: 1.6rem;
+  line-height: 1.5rem;
   color: rgba(243, 246, 255, 0.25);
+  transition: color 180ms ease;
 }
 
-.context-line--revealed {
+.context-token--revealed {
   color: #f3f6ff;
 }
 

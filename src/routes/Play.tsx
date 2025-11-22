@@ -42,6 +42,8 @@ export default function PlayRoute() {
   const applyInputMode = usePlaySessionStore((state) => state.applyInputMode)
   const mistakeVersion = usePlaySessionStore((state) => state.mistakeVersion)
   const inputMode = useSettingsStore((state) => state.inputMode)
+  const contextWindowRef = useRef<HTMLDivElement>(null)
+  const tokenRefs = useRef<(HTMLSpanElement | null)[]>([])
 
   const data = useLiveQuery(async (): Promise<PlayData | undefined> => {
     if (!textId) return undefined
@@ -85,8 +87,35 @@ export default function PlayRoute() {
   }, [resetSession])
 
   useEffect(() => {
+    tokenRefs.current = []
+  }, [activeSentence?.surfaceTokens])
+
+  useEffect(() => {
     applyInputMode(inputMode)
   }, [applyInputMode, inputMode])
+
+  useEffect(() => {
+    const windowEl = contextWindowRef.current
+    if (!windowEl) return
+    if (sentenceRevealCount <= 1) {
+      if (typeof windowEl.scrollTo === 'function') {
+        windowEl.scrollTo({ top: 0 })
+      } else {
+        windowEl.scrollTop = 0
+      }
+      return
+    }
+    const target = tokenRefs.current[sentenceRevealCount - 1]
+    if (target) {
+      const top = target.offsetTop
+      const desired = Math.max(0, top - windowEl.clientHeight / 2)
+      if (typeof windowEl.scrollTo === 'function') {
+        windowEl.scrollTo({ top: desired, behavior: 'smooth' })
+      } else {
+        windowEl.scrollTop = desired
+      }
+    }
+  }, [sentenceRevealCount, sentenceIndex])
   useEffect(() => {
     if (!sentenceKey || !activeSentence) {
       if (lastBootstrapKey.current !== undefined) {
@@ -191,17 +220,20 @@ export default function PlayRoute() {
 
       <div className="play-context">
         <p className="play-context__label">Context line</p>
-        <div className="play-context__window" lang={data.text.langFull}>
-          <div className="context-scroll" style={{ transform: `translateY(-${Math.max(0, sentenceRevealCount - 1) * 1.6}rem)` }}>
+        <div className="play-context__window" ref={contextWindowRef} lang={data.text.langFull}>
+          <div className="context-scroll">
             {activeSentence.surfaceTokens.map((token, idx) => {
               const isRevealed = idx < sentenceRevealCount
               return (
-                <p
+                <span
                   key={`${token}-${idx}`}
-                  className={`context-line${isRevealed ? ' context-line--revealed' : ''}`}
+                  ref={(el) => {
+                    tokenRefs.current[idx] = el
+                  }}
+                  className={`context-token${isRevealed ? ' context-token--revealed' : ''}`}
                 >
                   {token}
-                </p>
+                </span>
               )
             })}
           </div>
