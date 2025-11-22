@@ -308,6 +308,7 @@
   height: 3.5rem;
   overflow: auto;
   scrollbar-width: none;
+  position: relative;
 }
 
 .play-context__window::-webkit-scrollbar {

@@ -107,22 +107,21 @@ export default function PlayRoute() {
     }
     const target = tokenRefs.current[sentenceRevealCount - 1]
     if (target) {
-      const targetTop = target.offsetTop
-      const currentTop = windowEl.scrollTop
-      const lineHeight = target.clientHeight || 24
-      const maxVisibleTop = currentTop + lineHeight
-      if (targetTop >= maxVisibleTop) {
-        const desired = targetTop - lineHeight
+      const windowRect = windowEl.getBoundingClientRect()
+      const tokenRect = target.getBoundingClientRect()
+      const delta = tokenRect.top - windowRect.top
+      const lineHeight = (target.clientHeight || 24) + 4
+      let desired = windowEl.scrollTop
+      if (delta >= lineHeight) {
+        desired = windowEl.scrollTop + (delta - lineHeight / 2)
+      } else if (delta < 0) {
+        desired = Math.max(0, windowEl.scrollTop + delta)
+      }
+      if (desired !== windowEl.scrollTop) {
         if (typeof windowEl.scrollTo === 'function') {
           windowEl.scrollTo({ top: desired, behavior: 'smooth' })
         } else {
           windowEl.scrollTop = desired
-        }
-      } else if (targetTop < currentTop) {
-        if (typeof windowEl.scrollTo === 'function') {
-          windowEl.scrollTo({ top: targetTop, behavior: 'smooth' })
-        } else {
-          windowEl.scrollTop = targetTop
         }
       }
     }
