@@ -28,7 +28,7 @@ Word-Order Trainer – High-Level Plan
 
 6. Routing & UI
    - Library: pointer-only controls (Play/Continue, Stats, Import, Restart/Delete, Settings modal toggle); empty state messaging.
-   - Play: top bar (Home, title, Pause), faint full-sentence reveal line, two-row layout with fixed 2-line card height, always-on HUD, pause sheet with Resume/Quit/Session stats.
+   - Play: top bar (Home, title, Pause), fixed-height context lane that scrolls revealed tokens away, two-row layout with fixed 2-line card height, always-on HUD, pause sheet with Resume/Quit/Session stats.
    - Stats: per-text aggregates (accuracy, RPM, optional sparkline).
 
 7. Persistence & resume

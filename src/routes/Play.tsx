@@ -191,20 +191,21 @@ export default function PlayRoute() {
 
       <div className="play-context">
         <p className="play-context__label">Context line</p>
-        <p className="play-context__text" lang={data.text.langFull}>
-          {activeSentence.surfaceTokens.map((token, idx) => {
-            const isRevealed = idx < sentenceRevealCount
-            return (
-              <span
-                key={`${token}-${idx}`}
-                className={`context-token${isRevealed ? ' context-token--revealed' : ''}`}
-              >
-                {token}
-                {idx < activeSentence.surfaceTokens.length - 1 ? ' ' : ''}
-              </span>
-            )
-          })}
-        </p>
+        <div className="play-context__window" lang={data.text.langFull}>
+          <div className="context-scroll" style={{ transform: `translateY(-${Math.max(0, sentenceRevealCount - 1) * 1.6}rem)` }}>
+            {activeSentence.surfaceTokens.map((token, idx) => {
+              const isRevealed = idx < sentenceRevealCount
+              return (
+                <p
+                  key={`${token}-${idx}`}
+                  className={`context-line${isRevealed ? ' context-line--revealed' : ''}`}
+                >
+                  {token}
+                </p>
+              )
+            })}
+          </div>
+        </div>
       </div>
 
       <Hud hud={hud} status={status} />

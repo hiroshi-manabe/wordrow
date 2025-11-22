@@ -303,19 +303,27 @@
   text-transform: uppercase;
 }
 
-.play-context__text {
-  margin: 0.3rem 0 0;
+.play-context__window {
+  margin-top: 0.4rem;
+  height: 3.5rem;
+  overflow: hidden;
+}
+
+.context-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  transition: transform 200ms ease;
+}
+
+.context-line {
+  margin: 0;
   font-size: 1.15rem;
-  line-height: 1.4;
+  line-height: 1.6rem;
   color: rgba(243, 246, 255, 0.25);
-  min-height: 2.6rem;
 }
 
-.context-token {
-  transition: color 180ms ease;
-}
-
-.context-token--revealed {
+.context-line--revealed {
   color: #f3f6ff;
 }
 

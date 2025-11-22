@@ -1,4 +1,4 @@
-Word‑Order Trainer — v0.7 Spec (global 2‑line height, stable labels, conveyor push‑up)
+Word‑Order Trainer — v0.8 Spec (global 2‑line height, stable labels, conveyor push‑up)
 Goal: Train rapid word‑order recognition for space‑separated languages (EN/DE first) using two visible rows and home‑row keys. Rows keep their own labels so the user can mentally rehearse the next row while typing the current one. Global 2‑line row height keeps vertical rhythm constant between ASDF and JKL; rows. Keyboard‑first, offline‑first.
 
 Core loop
@@ -52,7 +52,7 @@ Library (Text list)
 Play
 * Top bar: Home (icon, top‑left, clickable even during play), title; Pause (icon, top‑right; clickable and Space‑toggle).
 * Global progress: thin row‑based bar with faint sentence tick marks; always‑visible compact text next to it (non‑interactive), e.g. 37% · 128/342 rows. Updates on row completion only.
-* Main area: context line with progressive reveal; two rows (top live ASDF, bottom queued JKL;). On top completion → push‑up (≤100 ms), new bottom slides in; input never disabled.
+* Main area: fixed-height context lane above the rows. Only the active portion of the sentence is visible; once tokens reveal completely they scroll upward and disappear instead of stretching the layout. Two rows (top live, bottom queued) sit below the context lane; on top completion → push-up (≤100 ms), new bottom slides in; input never disabled.
 * HUD (always on): minimal, top‑right: Accuracy, RPM, Streak.
 * Pause sheet (Space or Pause button): Resume, Quit to Library (Home), Session stats (Accuracy, RPM only). No sentence counts in MVP.
 * Input mode awareness: every row renders with the labels determined by the active mode. Switching modes while paused immediately rewires the key handler; a resumed session continues with the new mode instead of the previous one.
