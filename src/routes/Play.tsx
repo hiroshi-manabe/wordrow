@@ -109,7 +109,16 @@ export default function PlayRoute() {
     if (target) {
       const targetTop = target.offsetTop
       const currentTop = windowEl.scrollTop
-      if (Math.abs(targetTop - currentTop) > 2) {
+      const lineHeight = target.clientHeight || 24
+      const maxVisibleTop = currentTop + lineHeight
+      if (targetTop >= maxVisibleTop) {
+        const desired = targetTop - lineHeight
+        if (typeof windowEl.scrollTo === 'function') {
+          windowEl.scrollTo({ top: desired, behavior: 'smooth' })
+        } else {
+          windowEl.scrollTop = desired
+        }
+      } else if (targetTop < currentTop) {
         if (typeof windowEl.scrollTo === 'function') {
           windowEl.scrollTo({ top: targetTop, behavior: 'smooth' })
         } else {
