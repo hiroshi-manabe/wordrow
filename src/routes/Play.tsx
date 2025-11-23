@@ -449,7 +449,10 @@ function AdaptiveTokenText({ text }: { text: string }) {
     if (!ellipsized) {
       setDisplay(applyMiddleEllipsis(text))
       setEllipsized(true)
+      return
     }
+    // Still overflowing after ellipsis: tighten head/tail
+    setDisplay(applyMiddleEllipsis(display, 12, 5))
   }, [display, ellipsized, scale, text])
 
   return (
@@ -468,10 +471,8 @@ function AdaptiveTokenText({ text }: { text: string }) {
   )
 }
 
-function applyMiddleEllipsis(input: string) {
+function applyMiddleEllipsis(input: string, head = 18, tail = 7) {
   const chars = Array.from(input)
-  const head = 18
-  const tail = 7
   if (chars.length <= head + tail + 1) return input
   const headStr = chars.slice(0, head).join('')
   const tailStr = chars.slice(-tail).join('')
