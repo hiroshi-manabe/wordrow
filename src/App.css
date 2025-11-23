@@ -466,6 +466,10 @@
   max-height: 2.6rem;
   overflow: hidden;
   transform-origin: top left;
+  width: 100%;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .token-card__hint {
