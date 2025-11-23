@@ -37,6 +37,7 @@ async function seedSingleTokenSentence() {
       index: 0,
       surfaceTokens: ['Solo'],
       candidateTokens: ['solo'],
+      langFull: 'en',
       seed: 12345,
     })
   })

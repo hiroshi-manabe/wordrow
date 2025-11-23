@@ -12,6 +12,7 @@ export interface TokenCard {
   surface: string
   candidate: string
   absoluteIndex: number
+  language: string
 }
 
 export interface ChunkRow {

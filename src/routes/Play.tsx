@@ -139,6 +139,7 @@ export default function PlayRoute() {
       {
         surfaceTokens: activeSentence.surfaceTokens,
         candidateTokens: activeSentence.candidateTokens,
+        langFull: activeSentence.langFull,
         seed: activeSentence.seed,
       },
       { policyVersion: STORAGE_POLICY_VERSION, inputMode },
@@ -162,6 +163,7 @@ export default function PlayRoute() {
       {
         surfaceTokens: nextSentence.surfaceTokens,
         candidateTokens: nextSentence.candidateTokens,
+        langFull: nextSentence.langFull,
         seed: nextSentence.seed,
       },
       { policyVersion: STORAGE_POLICY_VERSION, inputMode },
