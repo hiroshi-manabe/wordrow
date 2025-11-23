@@ -468,9 +468,9 @@
   transform-origin: top left;
   width: 100%;
   white-space: normal;
-  word-break: normal;
-  overflow-wrap: normal;
-  hyphens: manual;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  hyphens: auto;
 }
 
 .token-card__hint {
