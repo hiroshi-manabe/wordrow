@@ -365,7 +365,7 @@ function RowPreview({
           const cardClass = `token-card${isDone ? ' token-card--done' : ''}`
           const hintClass = `token-card__hint${isDone ? ' token-card__hint--done' : ''}`
           return (
-            <div key={token.absoluteIndex} className={cardClass} lang="auto">
+            <div key={token.absoluteIndex} className={cardClass} lang={token.language}>
               <AdaptiveTokenText text={token.candidate} />
               <p className={hintClass}>{row.labels[idx]}</p>
             </div>

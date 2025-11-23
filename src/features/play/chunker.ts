@@ -26,6 +26,7 @@ export interface ChunkRow {
 export interface SentenceTokens {
   surfaceTokens: string[]
   candidateTokens: string[]
+  langFull: string
   seed: number
 }
 
@@ -41,7 +42,7 @@ export function buildChunksForSentence(
 ): ChunkRow[] {
   const chunkSize = options.chunkSize ?? CHUNK_SIZE
   const rows: ChunkRow[] = []
-  const { surfaceTokens, candidateTokens, seed } = sentence
+  const { surfaceTokens, candidateTokens, seed, langFull } = sentence
   let cursor = 0
   const mode = options.inputMode
 
@@ -57,6 +58,7 @@ export function buildChunksForSentence(
         surface: surfaceTokens[cursor + i],
         candidate: candidateTokens[cursor + i],
         absoluteIndex: cursor + i,
+        language: langFull,
       })
     }
 

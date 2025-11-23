@@ -23,6 +23,7 @@ export interface SentenceRecord {
   index: number
   surfaceTokens: string[]
   candidateTokens: string[]
+  langFull: string
   seed: number
 }
 

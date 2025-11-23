@@ -5,6 +5,7 @@ describe('buildChunksForSentence', () => {
   const baseSentence: SentenceTokens = {
     surfaceTokens: ['One', 'Two', 'Three', 'Four', 'Five', 'Six'],
     candidateTokens: ['one', 'two', 'three', 'four', 'five', 'six'],
+    langFull: 'en',
     seed: 0xabc123,
   }
 
@@ -29,6 +30,7 @@ describe('buildChunksForSentence', () => {
     const tinySentence: SentenceTokens = {
       surfaceTokens: ['Solo'],
       candidateTokens: ['solo'],
+      langFull: 'en',
       seed: 42,
     }
 
@@ -41,6 +43,7 @@ describe('buildChunksForSentence', () => {
     const broken: SentenceTokens = {
       surfaceTokens: ['One', 'Two'],
       candidateTokens: ['one'],
+      langFull: 'en',
       seed: 1,
     }
 

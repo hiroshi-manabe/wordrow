@@ -34,6 +34,7 @@ export async function importTextFromString(rawInput: string): Promise<ImportResu
     index,
     surfaceTokens: sentence.surfaceTokens,
     candidateTokens: sentence.candidateTokens,
+    langFull: parsed.langFull,
     seed: sentence.seed,
   }))
 
