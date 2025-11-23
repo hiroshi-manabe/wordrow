@@ -435,7 +435,9 @@ function AdaptiveTokenText({ text }: { text: string }) {
   useLayoutEffect(() => {
     const el = textRef.current
     if (!el) return
-    if (el.scrollHeight <= el.clientHeight) {
+    const overflowing =
+      el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1
+    if (!overflowing) {
       return
     }
     if (scale === 1) {
