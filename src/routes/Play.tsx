@@ -425,6 +425,7 @@ function AdaptiveTokenText({ text }: { text: string }) {
   const [scale, setScale] = useState(1)
   const [ellipsized, setEllipsized] = useState(false)
   const textRef = useRef<HTMLParagraphElement>(null)
+  const measureRef = useRef<HTMLParagraphElement>(null)
 
   useEffect(() => {
     setDisplay(text)
@@ -433,10 +434,11 @@ function AdaptiveTokenText({ text }: { text: string }) {
   }, [text])
 
   useLayoutEffect(() => {
-    const el = textRef.current
-    if (!el) return
+    const measureEl = measureRef.current
+    if (!measureEl) return
     const overflowing =
-      el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1
+      measureEl.scrollHeight > measureEl.clientHeight + 1 ||
+      measureEl.scrollWidth > measureEl.clientWidth + 1
     if (!overflowing) {
       return
     }
@@ -451,13 +453,18 @@ function AdaptiveTokenText({ text }: { text: string }) {
   }, [display, ellipsized, scale, text])
 
   return (
-    <p
-      ref={textRef}
-      className="token-card__text"
-      style={scale === 1 ? undefined : { transform: `scale(${scale})`, transformOrigin: 'top left' }}
-    >
-      {display}
-    </p>
+    <>
+      <p
+        ref={textRef}
+        className="token-card__text"
+        style={scale === 1 ? undefined : { transform: `scale(${scale})`, transformOrigin: 'top left' }}
+      >
+        {display}
+      </p>
+      <p ref={measureRef} className="token-card__measure">
+        {display}
+      </p>
+    </>
   )
 }
 
