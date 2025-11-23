@@ -463,6 +463,9 @@
   margin: 0;
   font-size: 1.1rem;
   line-height: 1.3;
+  max-height: 2.6rem;
+  overflow: hidden;
+  transform-origin: top left;
 }
 
 .token-card__hint {

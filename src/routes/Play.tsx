@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef } from 'react'
+/* eslint-disable react-hooks/set-state-in-effect */
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { buildChunksForSentence, CHUNK_SIZE, type ChunkRow } from '../features/play/chunker'
@@ -365,7 +366,7 @@ function RowPreview({
           const hintClass = `token-card__hint${isDone ? ' token-card__hint--done' : ''}`
           return (
             <div key={token.absoluteIndex} className={cardClass} lang="auto">
-              <p className="token-card__text">{token.candidate}</p>
+              <AdaptiveTokenText text={token.candidate} />
               <p className={hintClass}>{row.labels[idx]}</p>
             </div>
           )
@@ -415,4 +416,53 @@ function HudStat({ label, value }: { label: string; value: string }) {
       <p className="hud-stat__value">{value}</p>
     </div>
   )
+}
+
+function AdaptiveTokenText({ text }: { text: string }) {
+  const [display, setDisplay] = useState(text)
+  const [scale, setScale] = useState(1)
+  const [ellipsized, setEllipsized] = useState(false)
+  const textRef = useRef<HTMLParagraphElement>(null)
+
+  useEffect(() => {
+    setDisplay(text)
+    setScale(1)
+    setEllipsized(false)
+  }, [text])
+
+  useLayoutEffect(() => {
+    const el = textRef.current
+    if (!el) return
+    if (el.scrollHeight <= el.clientHeight) {
+      return
+    }
+    if (scale === 1) {
+      setScale(0.9)
+      return
+    }
+    if (!ellipsized) {
+      setDisplay(applyMiddleEllipsis(text))
+      setEllipsized(true)
+    }
+  }, [display, ellipsized, scale, text])
+
+  return (
+    <p
+      ref={textRef}
+      className="token-card__text"
+      style={scale === 1 ? undefined : { transform: `scale(${scale})`, transformOrigin: 'top left' }}
+    >
+      {display}
+    </p>
+  )
+}
+
+function applyMiddleEllipsis(input: string) {
+  const chars = Array.from(input)
+  const head = 18
+  const tail = 7
+  if (chars.length <= head + tail + 1) return input
+  const headStr = chars.slice(0, head).join('')
+  const tailStr = chars.slice(-tail).join('')
+  return `${headStr}…${tailStr}`
 }
