@@ -425,51 +425,60 @@ function AdaptiveTokenText({ text }: { text: string }) {
   const [scale, setScale] = useState(1)
   const [ellipsized, setEllipsized] = useState(false)
   const textRef = useRef<HTMLParagraphElement>(null)
-  const measureRef = useRef<HTMLParagraphElement>(null)
+  const [measuring, setMeasuring] = useState(true)
 
   useEffect(() => {
     setDisplay(text)
     setScale(1)
     setEllipsized(false)
+    setMeasuring(true)
   }, [text])
 
   useLayoutEffect(() => {
-    const measureEl = measureRef.current
-    const visibleEl = textRef.current
-    if (!measureEl || !visibleEl) return
-    const maxHeight = visibleEl.clientHeight || 0
-    const maxWidth = visibleEl.clientWidth || 0
-    const overflowing =
-      measureEl.scrollHeight > maxHeight + 1 || measureEl.scrollWidth > maxWidth + 1
+    const el = textRef.current
+    if (!el) return
+    const prevMaxHeight = el.style.maxHeight
+    const prevOverflow = el.style.overflow
+    el.style.maxHeight = 'none'
+    el.style.overflow = 'visible'
+    const overflowing = el.scrollHeight > 42 || el.scrollWidth > el.clientWidth + 1
     if (!overflowing) {
+      setMeasuring(false)
+      el.style.maxHeight = prevMaxHeight || '2.6rem'
+      el.style.overflow = prevOverflow || 'hidden'
       return
     }
     if (scale === 1) {
       setScale(0.9)
+      el.style.maxHeight = prevMaxHeight || '2.6rem'
+      el.style.overflow = prevOverflow || 'hidden'
       return
     }
     if (!ellipsized) {
       setDisplay(applyMiddleEllipsis(text))
       setEllipsized(true)
+      el.style.maxHeight = prevMaxHeight || '2.6rem'
+      el.style.overflow = prevOverflow || 'hidden'
       return
     }
-    // Still overflowing after ellipsis: tighten head/tail
     setDisplay(applyMiddleEllipsis(display, 12, 5))
+    el.style.maxHeight = prevMaxHeight || '2.6rem'
+    el.style.overflow = prevOverflow || 'hidden'
   }, [display, ellipsized, scale, text])
 
   return (
-    <>
-      <p
-        ref={textRef}
-        className="token-card__text"
-        style={scale === 1 ? undefined : { transform: `scale(${scale})`, transformOrigin: 'top left' }}
-      >
-        {display}
-      </p>
-      <p ref={measureRef} className="token-card__measure">
-        {display}
-      </p>
-    </>
+    <p
+      ref={textRef}
+      className="token-card__text"
+      style={
+        scale === 1
+          ? undefined
+          : { transform: `scale(${scale})`, transformOrigin: 'top left' }
+      }
+      data-measuring={measuring || undefined}
+    >
+      {display}
+    </p>
   )
 }
 
