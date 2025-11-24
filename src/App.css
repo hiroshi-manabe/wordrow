@@ -482,6 +482,8 @@
   position: absolute;
   pointer-events: none;
   inset: 0.75rem;
+  width: calc(100% - 1.5rem);
+  display: block;
   white-space: normal;
   word-break: break-word;
   overflow-wrap: anywhere;
