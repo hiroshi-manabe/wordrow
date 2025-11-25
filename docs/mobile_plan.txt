@@ -1,0 +1,26 @@
+Mobile-First Play View Plan
+
+1. Layout foundation
+   - Convert Play layout to a column grid (header, progress/HUD, context lane, token grid, footer).
+   - Use flex or CSS grid to ensure the stack fills 100vh on mobile without scrolling.
+
+2. Header and controls
+   - Compress the top bar into a single row with the title + Home/Pause icons.
+   - Collapse HUD stats into a single compact line beneath the progress bar on narrow screens.
+
+3. Context lane & progress
+   - Fix context lane height and ensure it scales down on small screens (smaller padding, font clamp).
+   - Align progress bar/HUD so they occupy minimal vertical space (~2 rows of text).
+
+4. Token grid
+   - Redesign the token cards into a responsive grid: 3 columns on small screens, expanding to 4+ on larger widths.
+   - Ensure rows stay within the remaining viewport height; cards should auto-wrap without vertical scroll.
+
+5. Bottom actions
+   - Move Play footer controls (Pause/Home) into a bottom row that stays visible on mobile.
+   - Consider using icon buttons to save horizontal space.
+
+6. Responsive polish
+   - Use media queries/container queries to tweak padding, font sizes, and gaps at key breakpoints (≤480px, ≤768px).
+   - Verify behavior with on-screen keyboards (safe area insets) and ensure no scroll is needed during play.
+
