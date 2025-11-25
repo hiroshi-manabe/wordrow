@@ -23,4 +23,4 @@ Mobile-First Play View Plan
 6. Responsive polish
    - Use media queries/container queries to tweak padding, font sizes, and gaps at key breakpoints (≤480px, ≤768px).
    - Verify behavior with on-screen keyboards (safe area insets) and ensure no scroll is needed during play.
-
+   - Initial release focuses on portrait orientation only; landscape layouts can show a friendly unsupported notice.
