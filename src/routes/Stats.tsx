@@ -16,8 +16,8 @@ export default function StatsRoute() {
         </p>
       </header>
       <p>
-        For now, use the Library to import texts and verify normalization/tokenization behavior via
-        the importer preview.
+        For now, return to the Library to import passages and verify normalization/tokenization
+        behavior via the importer preview.
       </p>
       <Link to="/" className="ghost-button">
         Back to Library

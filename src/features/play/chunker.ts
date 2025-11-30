@@ -37,15 +37,20 @@ export interface ChunkOptions {
   inputMode: InputMode
 }
 
+export interface ChunkContext {
+  startingHandIndex?: number
+}
+
 export function buildChunksForSentence(
   sentence: SentenceTokens,
-  options: ChunkOptions,
-): ChunkRow[] {
+  options: ChunkOptions & ChunkContext = { policyVersion: 0, inputMode: 'both' },
+): { rows: ChunkRow[]; lastHandIndex: number } {
   const chunkSize = options.chunkSize ?? CHUNK_SIZE
   const rows: ChunkRow[] = []
   const { surfaceTokens, candidateTokens, seed, langFull } = sentence
   let cursor = 0
   const mode = options.inputMode
+  let handIndex = options.startingHandIndex ?? 0
 
   if (surfaceTokens.length !== candidateTokens.length) {
     throw new Error('Surface tokens and candidate tokens must match in length.')
@@ -63,7 +68,7 @@ export function buildChunksForSentence(
       })
     }
 
-    const hand = resolveHandForMode(rows.length, mode)
+    const hand = resolveHandForMode(handIndex, mode)
     const labels = HAND_KEY_MAP[hand].slice(0, size)
     const expectedOrder = tokens.map((_, index) => index)
     const shuffledOrder = shuffleOrder(
@@ -81,9 +86,10 @@ export function buildChunksForSentence(
     })
 
     cursor += size
+    handIndex += 1
   }
 
-  return rows
+  return { rows, lastHandIndex: handIndex - 1 }
 }
 
 export function retargetRowForMode(row: ChunkRow | undefined, mode: InputMode): ChunkRow | undefined {

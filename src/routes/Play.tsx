@@ -2,7 +2,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { buildChunksForSentence, CHUNK_SIZE, type ChunkRow } from '../features/play/chunker'
+import { buildChunksForSentence, type ChunkRow } from '../features/play/chunker'
 import { usePlaySessionStore, type HudCounters } from '../features/play/state/session'
 import { useSettingsStore } from '../features/settings/store'
 import { db, STORAGE_POLICY_VERSION, type SentenceRecord, type TextRecord } from '../storage/db'
@@ -31,10 +31,9 @@ export default function PlayRoute() {
   const status = usePlaySessionStore((state) => state.status)
   const hud = usePlaySessionStore((state) => state.hud)
   const totalRows = usePlaySessionStore((state) => state.totalRows)
-  const sentenceRevealCount = usePlaySessionStore((state) => state.sentenceRevealCount)
+  const tokensRevealed = usePlaySessionStore((state) => state.tokensRevealed)
   const liveRowDone = usePlaySessionStore((state) => state.liveRowDone)
   const queuedRowDone = usePlaySessionStore((state) => state.queuedRowDone)
-  const sentenceIndex = usePlaySessionStore((state) => state.sentenceIndex)
   const bootstrap = usePlaySessionStore((state) => state.bootstrap)
   const handleInput = usePlaySessionStore((state) => state.handleInput)
   const pause = usePlaySessionStore((state) => state.pause)
@@ -54,28 +53,73 @@ export default function PlayRoute() {
     return { text, sentences }
   }, [textId])
 
-  const sentences = useMemo(() => data?.sentences ?? [], [data])
-  const activeSentence = sentences[sentenceIndex] ?? sentences[0]
-  const totalRowBudget = useMemo(
-    () =>
-      sentences.reduce(
-        (sum, sentence) => sum + Math.ceil(sentence.surfaceTokens.length / CHUNK_SIZE),
-        0,
-      ),
-    [sentences],
-  )
-  const totalTokenBudget = useMemo(
-    () => sentences.reduce((sum, sentence) => sum + sentence.surfaceTokens.length, 0),
-    [sentences],
-  )
+  const sentences = useMemo(() => {
+    if (!data?.text || data.text.id !== textId) {
+      return []
+    }
+    return data.sentences ?? []
+  }, [data, textId])
 
-  const sentenceKey = activeSentence
-    ? `${textId ?? 'unknown'}-${activeSentence.index}-${activeSentence.seed}`
-    : undefined
+  const prepared = useMemo(() => {
+    if (!textId || !sentences.length) {
+      return {
+        rows: [] as ChunkRow[],
+        contextSegments: [] as { tokens: { surface: string; index: number }[] }[],
+        totalTokens: 0,
+      }
+    }
+
+    let absoluteIndex = 0
+    const contextSegments = sentences.map((sentence) => {
+      const tokens = sentence.surfaceTokens.map((surface) => ({
+        surface,
+        index: absoluteIndex++,
+      }))
+      return { tokens }
+    })
+
+    const allRows: ChunkRow[] = []
+    let tokenOffset = 0
+    let handIndex = 0
+    let chunkIndex = 0
+    sentences.forEach((sentence) => {
+      const { rows: sentenceRows, lastHandIndex } = buildChunksForSentence(
+        {
+          surfaceTokens: sentence.surfaceTokens,
+          candidateTokens: sentence.candidateTokens,
+          langFull: sentence.langFull,
+          seed: sentence.seed,
+        },
+        { policyVersion: STORAGE_POLICY_VERSION, inputMode, startingHandIndex: handIndex },
+      )
+      sentenceRows.forEach((row) => {
+        allRows.push({
+          ...row,
+          chunkIndex,
+          tokens: row.tokens.map((token) => ({
+            ...token,
+            absoluteIndex: token.absoluteIndex + tokenOffset,
+          })),
+        })
+        chunkIndex += 1
+      })
+      tokenOffset += sentence.surfaceTokens.length
+      handIndex = lastHandIndex + 1
+    })
+
+    return { rows: allRows, contextSegments, totalTokens: absoluteIndex }
+  }, [inputMode, sentences, textId])
+
+  const preparedRows = prepared.rows
+  const contextSegments = prepared.contextSegments
+  const totalTokenBudget = prepared.totalTokens
+  const totalRowBudget = preparedRows.length
 
   const liveRow = sessionLiveRow
   const queuedRow = sessionQueuedRow
   const lastBootstrapKey = useRef<string | undefined>(undefined)
+  const rowsKey =
+    data?.text && textId ? `${data.text.id}-${data.text.updatedAt}-${inputMode}` : undefined
   const resetBootstrap = () => {
     lastBootstrapKey.current = undefined
   }
@@ -88,8 +132,13 @@ export default function PlayRoute() {
   }, [resetSession])
 
   useEffect(() => {
-    tokenRefs.current = []
-  }, [activeSentence?.surfaceTokens])
+    resetBootstrap()
+    resetSession()
+  }, [resetSession, textId])
+
+  useEffect(() => {
+    tokenRefs.current = new Array(totalTokenBudget).fill(null)
+  }, [totalTokenBudget])
 
   useEffect(() => {
     applyInputMode(inputMode)
@@ -98,7 +147,7 @@ export default function PlayRoute() {
   useEffect(() => {
     const windowEl = contextWindowRef.current
     if (!windowEl) return
-    if (sentenceRevealCount <= 1) {
+    if (tokensRevealed <= 1) {
       if (typeof windowEl.scrollTo === 'function') {
         windowEl.scrollTo({ top: 0 })
       } else {
@@ -106,7 +155,7 @@ export default function PlayRoute() {
       }
       return
     }
-    const target = tokenRefs.current[sentenceRevealCount - 1]
+    const target = tokenRefs.current[tokensRevealed - 1]
     if (target) {
       const windowRect = windowEl.getBoundingClientRect()
       const tokenRect = target.getBoundingClientRect()
@@ -120,59 +169,18 @@ export default function PlayRoute() {
         }
       }
     }
-  }, [sentenceRevealCount, sentenceIndex])
+  }, [tokensRevealed])
   useEffect(() => {
-    if (!sentenceKey || !activeSentence) {
-      if (lastBootstrapKey.current !== undefined) {
-        bootstrap([], {
-          sentenceIndex: 0,
-          totalRows: totalRowBudget,
-          totalTokens: totalTokenBudget,
-        })
-        resetBootstrap()
-      }
-      return
-    }
-    if (lastBootstrapKey.current === sentenceKey) return
-    lastBootstrapKey.current = sentenceKey
-    const rows = buildChunksForSentence(
-      {
-        surfaceTokens: activeSentence.surfaceTokens,
-        candidateTokens: activeSentence.candidateTokens,
-        langFull: activeSentence.langFull,
-        seed: activeSentence.seed,
-      },
-      { policyVersion: STORAGE_POLICY_VERSION, inputMode },
-    )
-    const currentIndex = sentences.findIndex((s) => s.index === activeSentence.index)
-    bootstrap(rows, {
-      sentenceIndex: currentIndex === -1 ? 0 : currentIndex,
+    if (!rowsKey) return
+    if (lastBootstrapKey.current === rowsKey) return
+    lastBootstrapKey.current = rowsKey
+    bootstrap(preparedRows, {
+      textId: textId ?? null,
       totalRows: totalRowBudget,
       totalTokens: totalTokenBudget,
     })
-  }, [activeSentence, bootstrap, inputMode, sentenceKey, sentences, totalRowBudget, totalTokenBudget])
+  }, [bootstrap, preparedRows, rowsKey, textId, totalRowBudget, totalTokenBudget])
 
-  useEffect(() => {
-    if (!sentences.length) return
-    if (status !== 'completed') return
-    const nextIndex = sentenceIndex + 1
-    if (nextIndex >= sentences.length) return
-    const nextSentence = sentences[nextIndex]
-    if (!nextSentence) return
-    const rows = buildChunksForSentence(
-      {
-        surfaceTokens: nextSentence.surfaceTokens,
-        candidateTokens: nextSentence.candidateTokens,
-        langFull: nextSentence.langFull,
-        seed: nextSentence.seed,
-      },
-      { policyVersion: STORAGE_POLICY_VERSION, inputMode },
-    )
-    const nextKey = `${textId ?? 'unknown'}-${nextSentence.index}-${nextSentence.seed}`
-    if (lastBootstrapKey.current === nextKey) return
-    lastBootstrapKey.current = nextKey
-    bootstrap(rows, { sentenceIndex: nextIndex, totalRows: totalRowBudget, totalTokens: totalTokenBudget })
-  }, [bootstrap, inputMode, sentenceIndex, sentences, status, textId, totalRowBudget, totalTokenBudget])
 
   useEffect(() => {
     if (status !== 'ready') return
@@ -209,49 +217,62 @@ export default function PlayRoute() {
     return <MissingState message="This text is empty. Import sentences before practicing." />
   }
 
-  const totalRowCount =
-    totalRows || Math.ceil((activeSentence?.surfaceTokens.length ?? 0) / CHUNK_SIZE)
+  const totalRowCount = totalRows || totalRowBudget
 
   return (
-    <section className="section-card play-card">
-      <header className="section-header">
-        <div>
-          <p className="eyebrow">Practice</p>
-          <h2>{data.text.title}</h2>
+    <section className="play-mobile">
+      <header className="play-mobile__header">
+        <div className="play-mobile__title">
+          <Link
+            to="/"
+            className="icon-button"
+            aria-label="Back to library"
+            onClick={resetSession}
+          >
+            ⌂
+          </Link>
+          <div>
+            <p className="play-mobile__eyebrow">{data.text.langFull}</p>
+            <h2>{data.text.title}</h2>
+          </div>
         </div>
-        <p className="section-description">
-          Live keyboard loop preview for sentence 1 · {data.sentences.length}. These rows already
-          respond to ASDF/JKL; inputs with deterministic shuffles and HUD updates.
-        </p>
+        <button className="icon-button" type="button" onClick={pause} aria-label="Pause practice">
+          ❚❚
+        </button>
       </header>
+
+      <div className="play-hud-row">
+        <ProgressBar rowsCompleted={hud.rowsCompleted} totalRows={totalRowCount} />
+        <Hud hud={hud} />
+      </div>
 
       <div className="play-context">
         <p className="play-context__label">Context line</p>
         <div className="play-context__window" ref={contextWindowRef} lang={data.text.langFull}>
           <div className="context-scroll">
-            {activeSentence.surfaceTokens.map((token, idx) => {
-              const isRevealed = idx < sentenceRevealCount
-              return (
-                <span
-                  key={`${token}-${idx}`}
-                  ref={(el) => {
-                    tokenRefs.current[idx] = el
-                  }}
-                  className={`context-token${isRevealed ? ' context-token--revealed' : ''}`}
-                >
-                  {token}
-                </span>
-              )
-            })}
+            {contextSegments.map((segment, segmentIdx) => (
+              <span key={`segment-${segmentIdx}`} className="context-sentence">
+                {segment.tokens.map((token) => {
+                  const isRevealed = token.index < tokensRevealed
+                  return (
+                    <span
+                      key={token.index}
+                      ref={(el) => {
+                        tokenRefs.current[token.index] = el
+                      }}
+                      className={`context-token${isRevealed ? ' context-token--revealed' : ''}`}
+                    >
+                      {token.surface}
+                    </span>
+                  )
+                })}
+              </span>
+            ))}
           </div>
         </div>
       </div>
 
-      <Hud hud={hud} status={status} />
-
-      <ProgressBar rowsCompleted={hud.rowsCompleted} totalRows={totalRowCount} />
-
-      <div className="play-rows">
+      <div className="play-rows play-mobile__rows">
         {liveRow ? (
           <RowPreview
             key={`live-${mistakeVersion}`}
@@ -268,27 +289,6 @@ export default function PlayRoute() {
         ) : null}
       </div>
 
-      <footer className="play-footer">
-        <div>
-          <p className="eyebrow">Controls</p>
-          <p className="muted">
-            Left hand controls (ASDF) drive the live row, right hand controls (JKL;) prep the queued
-            row. Mistakes flash the active row; rows alternate hands every chunk as you progress.
-          </p>
-        </div>
-        <div className="play-actions">
-          <button type="button" className="ghost-button" onClick={pause} disabled={status === 'paused'}>
-            Pause (Space)
-          </button>
-          <Link
-            to="/"
-            className="ghost-button"
-            onClick={resetSession}
-          >
-            Back to Library
-          </Link>
-        </div>
-      </footer>
       {status === 'paused' ? (
         <div className="modal-overlay" role="dialog" aria-modal="true">
           <div className="modal-sheet">
@@ -298,11 +298,7 @@ export default function PlayRoute() {
               <button type="button" className="primary-button" onClick={resume}>
                 Resume
               </button>
-              <Link
-                to="/"
-                className="ghost-button"
-                onClick={resetSession}
-              >
+              <Link to="/" className="ghost-button" onClick={resetSession}>
                 Back to Library (resets session)
               </Link>
             </div>
@@ -332,6 +328,27 @@ function MissingState({ message }: { message: string }) {
   )
 }
 
+const getHiddenMeasureEl = () => {
+  if (typeof document === 'undefined') return null
+  let el = document.getElementById('token-measure')
+  if (!el) {
+    el = document.createElement('p')
+    el.id = 'token-measure'
+    el.style.position = 'fixed'
+    el.style.top = '-9999px'
+    el.style.left = '-9999px'
+    el.style.visibility = 'hidden'
+    el.style.whiteSpace = 'normal'
+    el.style.wordBreak = 'break-word'
+    el.style.overflowWrap = 'anywhere'
+    el.style.hyphens = 'auto'
+    el.style.lineHeight = '1.3'
+    el.style.fontSize = '1.1rem'
+    document.body.appendChild(el)
+  }
+  return el
+}
+
 function RowPreview({
   row,
   status,
@@ -348,19 +365,6 @@ function RowPreview({
 
   return (
     <div className={className} data-hand={row.hand}>
-      <div className="play-row__labels">
-        {row.labels.map((label, index) => {
-          const isDone = Boolean(done?.[index])
-          return (
-            <span
-              key={label}
-              className={`play-row__label${isDone ? ' play-row__label--done' : ''}`}
-            >
-              {label}
-            </span>
-          )
-        })}
-      </div>
       <div className="play-row__cards">
         {orderedTokens.map((token, idx) => {
           const isDone = Boolean(done?.[idx])
@@ -378,18 +382,19 @@ function RowPreview({
   )
 }
 
-function Hud({ hud, status }: { hud: HudCounters; status: string }) {
+function Hud({ hud }: { hud: HudCounters }) {
   const accuracy =
     hud.tokensAttempted > 0
       ? Math.round((hud.tokensFirstTryCorrect / hud.tokensAttempted) * 100)
       : 0
+  const rpm =
+    hud.activeMs > 0 ? Math.round((hud.rowsCompleted / (hud.activeMs / 60000)) * 10) / 10 : 0
 
   return (
     <div className="play-hud">
       <HudStat label="Accuracy" value={`${accuracy}%`} />
-      <HudStat label="Rows" value={hud.rowsCompleted.toString()} />
-      <HudStat label="Streak" value={hud.streak.toString()} />
-      <HudStat label="Status" value={status === 'completed' ? 'Completed' : 'Ready'} />
+      <HudStat label="RPM" value={rpm.toFixed(1)} />
+      <HudStat label="Key streak" value={hud.streak.toString()} />
     </div>
   )
 }
@@ -425,46 +430,43 @@ function AdaptiveTokenText({ text }: { text: string }) {
   const [scale, setScale] = useState(1)
   const [ellipsized, setEllipsized] = useState(false)
   const textRef = useRef<HTMLParagraphElement>(null)
-  const [measuring, setMeasuring] = useState(true)
+  const [cardWidth, setCardWidth] = useState(0)
 
   useEffect(() => {
     setDisplay(text)
     setScale(1)
     setEllipsized(false)
-    setMeasuring(true)
   }, [text])
 
   useLayoutEffect(() => {
-    const el = textRef.current
-    if (!el) return
-    const prevMaxHeight = el.style.maxHeight
-    const prevOverflow = el.style.overflow
-    el.style.maxHeight = 'none'
-    el.style.overflow = 'visible'
-    const overflowing = el.scrollHeight > 42 || el.scrollWidth > el.clientWidth + 1
+    const cardEl = textRef.current?.parentElement
+    if (cardEl) {
+      const width = cardEl.clientWidth - 16 // padding
+      if (width > 0) setCardWidth(width)
+    }
+    const measureEl = getHiddenMeasureEl()
+    if (!measureEl) return
+    measureEl.style.width = `${cardWidth}px`
+    measureEl.textContent = display
+    const lineHeight = parseFloat(getComputedStyle(textRef.current!).lineHeight)
+    const maxLines = window.matchMedia('(max-width: 400px)').matches ? 3 : 2
+    const maxHeight = lineHeight * maxLines + 2
+    const overflowing =
+      measureEl.scrollHeight > maxHeight || measureEl.scrollWidth > (cardWidth || 1) + 1
     if (!overflowing) {
-      setMeasuring(false)
-      el.style.maxHeight = prevMaxHeight || '2.6rem'
-      el.style.overflow = prevOverflow || 'hidden'
       return
     }
     if (scale === 1) {
       setScale(0.9)
-      el.style.maxHeight = prevMaxHeight || '2.6rem'
-      el.style.overflow = prevOverflow || 'hidden'
       return
     }
     if (!ellipsized) {
       setDisplay(applyMiddleEllipsis(text))
       setEllipsized(true)
-      el.style.maxHeight = prevMaxHeight || '2.6rem'
-      el.style.overflow = prevOverflow || 'hidden'
       return
     }
     setDisplay(applyMiddleEllipsis(display, 12, 5))
-    el.style.maxHeight = prevMaxHeight || '2.6rem'
-    el.style.overflow = prevOverflow || 'hidden'
-  }, [display, ellipsized, scale, text])
+  }, [display, ellipsized, scale, text, cardWidth])
 
   return (
     <p
@@ -475,7 +477,6 @@ function AdaptiveTokenText({ text }: { text: string }) {
           ? undefined
           : { transform: `scale(${scale})`, transformOrigin: 'top left' }
       }
-      data-measuring={measuring || undefined}
     >
       {display}
     </p>

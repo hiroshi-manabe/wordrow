@@ -1,4 +1,4 @@
-Word‑Order Trainer — v0.8 Spec (global 2‑line height, stable labels, conveyor push‑up)
+Word‑Order Trainer — v1.1 Spec (global 2‑line height, stable labels, conveyor push‑up, cross‑sentence stream)
 Goal: Train rapid word‑order recognition for space‑separated languages (EN/DE first) using two visible rows and home‑row keys. Rows keep their own labels so the user can mentally rehearse the next row while typing the current one. Global 2‑line row height keeps vertical rhythm constant between ASDF and JKL; rows. Keyboard‑first, offline‑first.
 
 Core loop
@@ -7,12 +7,13 @@ Core loop
     * Both‑hands mode → alternating LEFT/RIGHT rows (default)
     * LEFT → A S D F
     * RIGHT → J K L ;
-* Alternation: rows alternate hands in both‑hands mode. In single‑hand modes every row uses the configured hand.
+* Alternation: rows alternate hands in both‑hands mode, and the pattern continues across sentence boundaries (…L,R,L,R…). Single‑hand modes keep every row on the configured hand.
 * Conveyor push‑up: when the top row completes, the bottom row slides up (keeps labels/hand) to become the new top; a fresh bottom row spawns with the opposite hand.
 * Ultra‑fast animation: 80–100 ms push‑up; input remains enabled during the slide; the newly promoted row is immediately hot.
 Sentence model & reveal
-* No cross‑sentence chunks. New two‑row cycle per sentence.
-* Progressive reveal: show the full surface sentence at ~5–10% opacity (barely legible). On each correct key, reveal the next surface span (token + trailing punctuation/space) in solid black.
+* Cross‑sentence stream: Chunk the entire text in a single pass. The queue is built from the flattened token stream, so the two visible rows always represent consecutive chunks even if they span a sentence boundary. No background bootstrap/prefetch is required once the text loads.
+* Reveal continuity: The dim “context lane” shows the entire text as a paragraph with newline-only separators (no extra markers). Tokens remain visible even as the user finishes the previous sentence; the reveal highlight simply advances across boundaries without resetting.
+* Progressive reveal: show the full surface stream at ~5–10% opacity (barely legible). On each correct key, reveal the next surface span (token + trailing punctuation/space) in solid black.
 * Surface vs Candidate forms (per sentence):
     * Surface tokens: original orthography (casing + punctuation) for reveal.
     * Candidate tokens: normalized for matching:
@@ -53,7 +54,7 @@ Play
 * Top bar: Home (icon, top‑left, clickable even during play), title; Pause (icon, top‑right; clickable and Space‑toggle).
 * Global progress: thin row‑based bar with faint sentence tick marks; always‑visible compact text next to it (non‑interactive), e.g. 37% · 128/342 rows. Updates on row completion only.
 * Main area: fixed-height context lane above the rows. Only the active portion of the sentence is visible; once tokens reveal completely they scroll upward and disappear instead of stretching the layout. Two rows (top live, bottom queued) sit below the context lane; on top completion → push-up (≤100 ms), new bottom slides in; input never disabled.
-* HUD (always on): minimal, top‑right: Accuracy, RPM, Streak.
+* HUD (always on): minimal, top‑right: Accuracy, RPM, Key Streak.
 * Pause sheet (Space or Pause button): Resume, Quit to Library (Home), Session stats (Accuracy, RPM only). No sentence counts in MVP.
 * Input mode awareness: every row renders with the labels determined by the active mode. Switching modes while paused immediately rewires the key handler; a resumed session continues with the new mode instead of the previous one.
 Global progress details
@@ -88,8 +89,8 @@ Typography & long token policy (MVP)
 Stats (MVP‑minimal)
 * In‑play HUD (always on):
     * Accuracy (first‑try) = first‑hit correct ÷ tokens attempted (session).
-    * RPM (rows per minute, excludes paused time). Exact: RPM_session = rows_completed / (active_ms / 60000). HUD may show an EMA of per‑row RPM (α≈0.2) updated on row completion; the session sheet shows the session average.
-    * Streak = consecutive perfect rows (no wrong keys in the row).
+    * RPM (rows per minute, excludes paused time). Exact: RPM_session = rows_completed / (active_ms / 60000). HUD may show an EMA of per‑row RPM (α≈0.2) updated on row completion; the session sheet shows the session average. (Per‑row count is no longer surfaced elsewhere.)
+    * Key Streak = consecutive correct keypresses since the last mistake (resets on any incorrect key).
 * Session summary (Pause → Session stats): show Accuracy and RPM only. No keys, no IKI, no sentence counts, no replay, no export.
 * Per‑text Overview (from Library → Stats): lifetime Accuracy and RPM; optional tiny sparklines (last 10 sessions). Nothing else.
 * Logging: store per‑session counters only (tokens_total, tokens_first_try_correct, rows_completed, sentences_completed, mistakes_total, active_ms, started_at/ended_at, rpm_session_avg, accuracy_session). Append session summaries to the text’s history and maintain lifetime aggregates.

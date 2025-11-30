@@ -14,8 +14,9 @@ export interface HudCounters {
 }
 
 export interface PlaySessionState {
-  sentenceIndex: number
+  textId: string | null
   revealIndex: number
+  lastActiveAt: number | null
   liveRow?: ChunkRow
   liveRowDone: boolean[] | null
   queuedRow?: ChunkRow
@@ -23,7 +24,8 @@ export interface PlaySessionState {
   pendingRows: ChunkRow[]
   pendingRowsDone: boolean[][]
   totalRows: number
-  sentenceRevealCount: number
+  totalTokens: number
+  tokensRevealed: number
   hud: HudCounters
   status: 'idle' | 'ready' | 'paused' | 'completed'
   mistakeVersion: number
@@ -32,7 +34,7 @@ export interface PlaySessionState {
 interface PlaySessionActions {
   bootstrap: (
     rows: ChunkRow[],
-    meta: { sentenceIndex: number; totalRows: number; totalTokens: number },
+    meta: { textId: string | null; totalRows: number; totalTokens: number },
   ) => void
   handleInput: (label: string) => void
   pause: () => void
@@ -55,14 +57,16 @@ const createDoneArray = (row?: ChunkRow | null): boolean[] =>
   row ? new Array(row.labels.length).fill(false) : []
 
 const initialState: PlaySessionState = {
-  sentenceIndex: 0,
+  textId: null,
   revealIndex: 0,
+  lastActiveAt: null,
   liveRowDone: null,
   queuedRowDone: null,
   pendingRows: [],
   pendingRowsDone: [],
   totalRows: 0,
-  sentenceRevealCount: 0,
+  totalTokens: 0,
+  tokensRevealed: 0,
   hud: createDefaultHud(),
   status: 'idle',
   mistakeVersion: 0,
@@ -72,7 +76,7 @@ export const usePlaySessionStore = create<PlaySessionState & PlaySessionActions>
   ...initialState,
   bootstrap: (
     rows: ChunkRow[],
-    meta: { sentenceIndex: number; totalRows: number; totalTokens: number },
+    meta: { textId: string | null; totalRows: number; totalTokens: number },
   ) => {
     const updateHud = (existing: HudCounters | undefined) =>
       existing
@@ -81,6 +85,7 @@ export const usePlaySessionStore = create<PlaySessionState & PlaySessionActions>
 
     if (!rows.length) {
       set((state) => ({
+        textId: meta.textId ?? null,
         status: 'idle',
         liveRow: undefined,
         liveRowDone: null,
@@ -89,10 +94,12 @@ export const usePlaySessionStore = create<PlaySessionState & PlaySessionActions>
         pendingRows: [],
         pendingRowsDone: [],
         totalRows: meta.totalRows,
+        totalTokens: meta.totalTokens,
         hud: updateHud(state.hud),
-        sentenceRevealCount: 0,
+        tokensRevealed: 0,
         mistakeVersion: 0,
-        sentenceIndex: meta.sentenceIndex,
+        revealIndex: 0,
+        lastActiveAt: null,
       }))
       return
     }
@@ -102,6 +109,7 @@ export const usePlaySessionStore = create<PlaySessionState & PlaySessionActions>
     const pendingRows = rows.slice(2)
 
     set((state) => ({
+      textId: meta.textId ?? null,
       liveRow,
       liveRowDone: liveRow ? createDoneArray(liveRow) : null,
       queuedRow,
@@ -109,12 +117,13 @@ export const usePlaySessionStore = create<PlaySessionState & PlaySessionActions>
       pendingRows,
       pendingRowsDone: pendingRows.map((row) => createDoneArray(row)),
       totalRows: meta.totalRows,
-      sentenceIndex: meta.sentenceIndex,
+      totalTokens: meta.totalTokens,
       revealIndex: 0,
-      sentenceRevealCount: 0,
+      tokensRevealed: 0,
       status: 'ready',
       mistakeVersion: 0,
       hud: updateHud(state.hud),
+      lastActiveAt: Date.now(),
     }))
   },
   handleInput: (label: string) => {
@@ -123,33 +132,44 @@ export const usePlaySessionStore = create<PlaySessionState & PlaySessionActions>
         return state
       }
 
+      const now = Date.now()
+      const elapsed = state.lastActiveAt ? Math.max(0, now - state.lastActiveAt) : 0
+      const hudWithTime =
+        elapsed > 0 ? { ...state.hud, activeMs: state.hud.activeMs + elapsed } : state.hud
+
       const targetIndex = state.liveRow.labels.indexOf(label)
       if (targetIndex === -1) {
         return {
           ...state,
           hud: {
-            ...state.hud,
-            mistakesTotal: state.hud.mistakesTotal + 1,
-            tokensAttempted: state.hud.tokensAttempted + 1,
+            ...hudWithTime,
+            mistakesTotal: hudWithTime.mistakesTotal + 1,
+            tokensAttempted: hudWithTime.tokensAttempted + 1,
             streak: 0,
           },
           mistakeVersion: state.mistakeVersion + 1,
+          lastActiveAt: now,
         }
       }
 
       if (state.liveRowDone[targetIndex]) {
-        return state
+        return {
+          ...state,
+          hud: hudWithTime,
+          lastActiveAt: now,
+        }
       }
 
       const missState = {
         ...state,
         hud: {
-          ...state.hud,
-          mistakesTotal: state.hud.mistakesTotal + 1,
-          tokensAttempted: state.hud.tokensAttempted + 1,
+          ...hudWithTime,
+          mistakesTotal: hudWithTime.mistakesTotal + 1,
+          tokensAttempted: hudWithTime.tokensAttempted + 1,
           streak: 0,
         },
         mistakeVersion: state.mistakeVersion + 1,
+        lastActiveAt: now,
       }
 
       const isCorrect = state.liveRow.order[targetIndex] === state.revealIndex
@@ -165,29 +185,29 @@ export const usePlaySessionStore = create<PlaySessionState & PlaySessionActions>
 
       const nextRevealIndex = state.revealIndex + 1
       const rowCompleted = nextRevealIndex >= state.liveRow.tokens.length
-      const nextSentenceReveal = state.sentenceRevealCount + 1
+      const tokensRevealed = state.tokensRevealed + 1
       const nextHud: HudCounters = {
-        ...state.hud,
-        tokensAttempted: state.hud.tokensAttempted + 1,
-        tokensFirstTryCorrect: state.hud.tokensFirstTryCorrect + 1,
-        rowsCompleted: rowCompleted ? state.hud.rowsCompleted + 1 : state.hud.rowsCompleted,
-        streak: rowCompleted ? state.hud.streak + 1 : state.hud.streak,
+        ...hudWithTime,
+        tokensAttempted: hudWithTime.tokensAttempted + 1,
+        tokensFirstTryCorrect: hudWithTime.tokensFirstTryCorrect + 1,
+        rowsCompleted: rowCompleted ? hudWithTime.rowsCompleted + 1 : hudWithTime.rowsCompleted,
+        streak: hudWithTime.streak + 1,
       }
 
       if (!rowCompleted) {
         return {
           ...state,
           revealIndex: nextRevealIndex,
-          sentenceRevealCount: nextSentenceReveal,
+          tokensRevealed,
           liveRowDone: updatedLiveRowDone,
           hud: nextHud,
+          lastActiveAt: now,
         }
       }
 
       const promotedRow = state.queuedRow
       const [nextQueuedRow, ...restPending] = state.pendingRows
       const [nextQueuedRowDone, ...restPendingDone] = state.pendingRowsDone
-
       return {
         ...state,
         liveRow: promotedRow,
@@ -197,14 +217,25 @@ export const usePlaySessionStore = create<PlaySessionState & PlaySessionActions>
         pendingRows: restPending,
         pendingRowsDone: restPendingDone,
         revealIndex: 0,
-        sentenceRevealCount: nextSentenceReveal,
+        tokensRevealed,
         hud: nextHud,
         status: promotedRow ? 'ready' : 'completed',
+        lastActiveAt: promotedRow ? now : null,
       }
     })
   },
-  pause: () => set((state) => (state.status === 'ready' ? { ...state, status: 'paused' } : state)),
-  resume: () => set((state) => (state.status === 'paused' ? { ...state, status: 'ready' } : state)),
+  pause: () =>
+    set((state) => {
+      if (state.status !== 'ready') return state
+      const now = Date.now()
+      const elapsed = state.lastActiveAt ? Math.max(0, now - state.lastActiveAt) : 0
+      const hud = elapsed > 0 ? { ...state.hud, activeMs: state.hud.activeMs + elapsed } : state.hud
+      return { ...state, status: 'paused', hud, lastActiveAt: null }
+    }),
+  resume: () =>
+    set((state) =>
+      state.status === 'paused' ? { ...state, status: 'ready', lastActiveAt: Date.now() } : state,
+    ),
   applyInputMode: (mode: InputMode) =>
     set((state) => ({
       ...state,

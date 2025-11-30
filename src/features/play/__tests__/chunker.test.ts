@@ -10,7 +10,7 @@ describe('buildChunksForSentence', () => {
   }
 
   it('chunks tokens into alternating hands with deterministic order', () => {
-    const rows = buildChunksForSentence(baseSentence, { policyVersion: 1, inputMode: 'both' })
+    const { rows } = buildChunksForSentence(baseSentence, { policyVersion: 1, inputMode: 'both' })
 
     expect(rows).toHaveLength(2)
     expect(rows[0].hand).toBe('left')
@@ -22,8 +22,8 @@ describe('buildChunksForSentence', () => {
     expect(rows[0].order).not.toEqual(rows[0].expectedOrder)
 
     const rerun = buildChunksForSentence(baseSentence, { policyVersion: 1, inputMode: 'both' })
-    expect(rerun[0].order).toEqual(rows[0].order)
-    expect(rerun[1].order).toEqual(rows[1].order)
+    expect(rerun.rows[0].order).toEqual(rows[0].order)
+    expect(rerun.rows[1].order).toEqual(rows[1].order)
   })
 
   it('returns identity order for single-token chunks', () => {
@@ -34,7 +34,7 @@ describe('buildChunksForSentence', () => {
       seed: 42,
     }
 
-    const rows = buildChunksForSentence(tinySentence, { policyVersion: 1, inputMode: 'both' })
+    const { rows } = buildChunksForSentence(tinySentence, { policyVersion: 1, inputMode: 'both' })
     expect(rows[0].order).toEqual([0])
     expect(rows[0].expectedOrder).toEqual([0])
   })
