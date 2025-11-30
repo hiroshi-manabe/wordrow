@@ -21,6 +21,9 @@ Additional scripts:
 - `npm run format` – Prettier formatting pass across the repo
 - `npm run test` – Vitest unit tests (jsdom environment)
 
+## Live Demo
+Deployed via GitHub Pages: https://hiroshi-manabe.github.io/wordrow/
+
 ## Documentation
 The original design materials live in [`docs/`](docs):
 - [`docs/spec.txt`](docs/spec.txt) – v0.6 MVP gameplay/UX spec
