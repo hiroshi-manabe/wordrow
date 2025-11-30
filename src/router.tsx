@@ -4,14 +4,17 @@ import LibraryRoute from './routes/Library'
 import PlayRoute from './routes/Play'
 import StatsRoute from './routes/Stats'
 
-export const appRouter = createBrowserRouter([
-  {
-    path: '/',
-    element: <RootLayout />,
-    children: [
-      { index: true, element: <LibraryRoute /> },
-      { path: 'play/:textId', element: <PlayRoute /> },
-      { path: 'stats/:textId', element: <StatsRoute /> },
-    ],
-  },
-])
+export const appRouter = createBrowserRouter(
+  [
+    {
+      path: '/',
+      element: <RootLayout />,
+      children: [
+        { index: true, element: <LibraryRoute /> },
+        { path: 'play/:textId', element: <PlayRoute /> },
+        { path: 'stats/:textId', element: <StatsRoute /> },
+      ],
+    },
+  ],
+  { basename: import.meta.env.BASE_URL },
+)
