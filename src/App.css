@@ -35,6 +35,12 @@
   padding: 0.5rem 0.25rem 1rem;
 }
 
+.library-topbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 @media (min-width: 860px) {
   .library-grid {
     display: grid;
@@ -126,6 +132,12 @@
   margin: 0;
   font-size: 1.3rem;
   font-weight: 600;
+}
+
+.text-card__title--truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .text-card__meta {

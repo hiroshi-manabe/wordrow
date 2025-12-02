@@ -1,4 +1,4 @@
-Word‑Order Trainer — v1.2 Spec (global 2‑line height, stable labels, conveyor push‑up, cross‑sentence stream, mobile-first library)
+Word‑Order Trainer — v1.4 Spec (global 2‑line height, stable labels, conveyor push‑up, cross‑sentence stream, mobile-first library)
 Goal: Train rapid word‑order recognition for space‑separated languages (EN/DE first) using two visible rows and home‑row keys. Rows keep their own labels so the user can mentally rehearse the next row while typing the current one. Global 2‑line row height keeps vertical rhythm constant between ASDF and JKL; rows. Keyboard‑first, offline‑first.
 
 Core loop
@@ -42,10 +42,10 @@ Screens & flow
 Routes: /library → /play/:textId → /stats/:textId
 Library (mobile-first)
 * Layout: single-column cards on small screens; two-column only on wide viewports. Compact padding/gaps, touch-friendly buttons.
-* Header: title + two compact buttons (Settings; Import/info toggle). Long import instructions live behind a toggle/sheet, not inline.
-* Import flow: top-level Import button swaps to a compact import view (paste/file picker + short guide). Textarea is short and meant for preview, not long-form editing.
-* Tiles: Title, meta (lang, sentences, updated), and a compact actions row. Actions are icon+label or icon-only for Play, Info/Preview, Stats, Delete. Tooltips/aria-labels required.
-* Navigation: Stats opens /stats/:textId as a page; Back returns to Library with selection preserved/focus restored.
+* Header: app-level bar (top) with Settings gear icon (visible everywhere); Library title row beneath with Import as text. No “Import info” toggle inline.
+* Import flow: top-level Import button opens a separate import view/sheet (paste/file picker + short guide). Textarea is short and meant for preview, not long-form editing. Import view uses a simple back arrow to return to the list; no Settings button inside the import view.
+* Tiles: Title (single line with ellipsis on overflow) and a compact actions row of icons on the next line (Play, Info/Preview, Stats, Delete). Tooltips/aria-labels required. Per-text meta (sentences/lang/updated) is shown in the Info/Preview view, not inline on the card.
+* Navigation: Stats opens /stats/:textId as a detail page; Info/Preview shows a lightweight preview plus meta. Back returns to Library with selection preserved/focus restored.
 * Empty state: “Import a text to begin” with drag‑and‑drop.
 * Input policy (Library): pointer‑only UI; no custom keyboard shortcuts. Native accessibility activation (Tab → Enter/Space) is supported but not advertised.
 * Settings sheet: global “Input mode” selector with three options—Both hands (default, alternating rows), Left hand only (ASDF), Right hand only (JKL;). Changing the mode updates the next Play session immediately; historical runs and stats do not store mode metadata.

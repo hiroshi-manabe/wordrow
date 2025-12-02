@@ -7,7 +7,7 @@ import { db } from '../storage/db'
 import { useSettingsStore } from '../features/settings/store'
 import type { InputMode } from '../features/settings/types'
 import { deleteTextById } from '../storage/delete-text'
-import { InfoIcon, PlayIcon, StatsIcon, TrashIcon } from '../assets/icons'
+import { BackIcon, InfoIcon, PlayIcon, SettingsIcon, StatsIcon, TrashIcon } from '../assets/icons'
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, {
   dateStyle: 'medium',
@@ -17,49 +17,65 @@ const dateFormatter = new Intl.DateTimeFormat(undefined, {
 export default function LibraryRoute() {
   const texts = useLiveQuery(() => db.texts.orderBy('updatedAt').reverse().toArray(), [])
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [infoOpen, setInfoOpen] = useState(false)
   const [showImport, setShowImport] = useState(false)
   const [previewId, setPreviewId] = useState<string | null>(null)
+
+  if (showImport) {
+    return (
+      <div className="library-grid">
+        <section className="section-card">
+          <header className="section-header library-header">
+            <div>
+              <p className="eyebrow">Library</p>
+              <h2>Import text</h2>
+            </div>
+            <div className="library-actions">
+              <button
+                type="button"
+                className="primary-button"
+                onClick={() => setShowImport(false)}
+                aria-label="Back to list"
+              >
+                <BackIcon size={18} />
+              </button>
+            </div>
+          </header>
+          <TextImportPanel />
+        </section>
+      </div>
+    )
+  }
 
   return (
     <div className="library-grid">
       <section className="section-card">
         <header className="section-header library-header">
-          <div>
+          <div className="library-topbar">
+            <button
+              type="button"
+              className="icon-button ghost-button"
+              aria-label="Settings"
+              onClick={() => setSettingsOpen(true)}
+            >
+              <SettingsIcon size={18} />
+            </button>
             <p className="eyebrow">Library</p>
+          </div>
+          <div>
             <h2>Your texts</h2>
           </div>
           <div className="library-actions">
-            <button type="button" className="ghost-button" onClick={() => setInfoOpen((v) => !v)}>
-              {infoOpen ? 'Hide info' : 'Import info'}
-            </button>
-            <button type="button" className="primary-button" onClick={() => setSettingsOpen(true)}>
-              Settings
-            </button>
             <button
               type="button"
               className="primary-button"
-              onClick={() => setShowImport((v) => !v)}
+              onClick={() => setShowImport(true)}
             >
-              {showImport ? 'Hide import' : 'Import text'}
+              Import text
             </button>
           </div>
         </header>
-        {infoOpen ? (
-          <div className="library-info muted">
-            <p>
-              Import a text to begin practicing word-order recall. Each line becomes a sentence and
-              stays deterministic thanks to per-sentence seeds.
-            </p>
-            <p>
-              Title on line 1, optional <code>lang=&lt;tag&gt;</code> on line 2, sentences after that.
-              We store everything locally in your browser (Dexie).
-            </p>
-          </div>
-        ) : null}
         {renderLibraryContents(texts, previewId, setPreviewId)}
       </section>
-      {showImport ? <TextImportPanel /> : null}
       {settingsOpen ? <SettingsModal onClose={() => setSettingsOpen(false)} /> : null}
     </div>
   )
@@ -83,11 +99,7 @@ function renderLibraryContents(
       {texts.map((text) => (
         <li key={text.id} className="text-card">
           <div>
-            <p className="text-card__title">{text.title}</p>
-            <p className="text-card__meta">
-              {text.sentencesCount} sentences · lang={text.langFull}
-            </p>
-            <p className="text-card__meta">Updated {dateFormatter.format(new Date(text.updatedAt))}</p>
+            <p className="text-card__title text-card__title--truncate">{text.title}</p>
           </div>
           <div className="text-card__actions">
             <Link to={`/play/${text.id}`} className="icon-button ghost-button" aria-label="Play text">
@@ -106,7 +118,7 @@ function renderLibraryContents(
             </Link>
             <DeleteButton textId={text.id} />
           </div>
-          {previewId === text.id ? <TextPreview textId={text.id} /> : null}
+          {previewId === text.id ? <TextPreview text={text} /> : null}
         </li>
       ))}
     </ul>
@@ -183,14 +195,18 @@ function DeleteButton({ textId }: { textId: string }) {
   )
 }
 
-function TextPreview({ textId }: { textId: string }) {
+function TextPreview({ text }: { text: TextRecord }) {
   const sentences = useLiveQuery(
-    () => db.sentences.where('textId').equals(textId).limit(3).toArray(),
-    [textId],
+    () => db.sentences.where('textId').equals(text.id).limit(3).toArray(),
+    [text.id],
   )
   if (!sentences?.length) return null
   return (
     <div className="text-preview">
+      <p className="text-preview__meta muted">
+        {text.sentencesCount} sentences · lang={text.langFull} · Updated{' '}
+        {dateFormatter.format(new Date(text.updatedAt))}
+      </p>
       {sentences.map((s) => (
         <p key={s.id} className="text-preview__line">
           {s.surfaceTokens.join(' ')}
