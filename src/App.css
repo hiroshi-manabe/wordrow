@@ -188,7 +188,7 @@
 .ghost-button {
   border: 1px solid transparent;
   border-radius: 0.75rem;
-  padding: 0.65rem 1.1rem;
+  padding: 0.65rem 0rem;
   font-weight: 600;
   font-size: 0.95rem;
   cursor: pointer;
