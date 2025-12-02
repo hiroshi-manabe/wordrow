@@ -198,6 +198,7 @@
 
 .primary-button {
   background: linear-gradient(120deg, #5de0e6, #004aad);
+  padding: 0.65rem 1.1rem;
   color: #05060e;
 }
 
