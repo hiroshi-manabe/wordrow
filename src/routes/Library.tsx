@@ -16,6 +16,7 @@ const dateFormatter = new Intl.DateTimeFormat(undefined, {
 export default function LibraryRoute() {
   const texts = useLiveQuery(() => db.texts.orderBy('updatedAt').reverse().toArray(), [])
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [infoOpen, setInfoOpen] = useState(false)
 
   return (
     <div className="library-grid">
@@ -25,14 +26,27 @@ export default function LibraryRoute() {
             <p className="eyebrow">Library</p>
             <h2>Your texts</h2>
           </div>
-          <p className="section-description">
-            Import a text to begin practicing word-order recall. Each line becomes a sentence and
-            stays deterministic thanks to per-sentence seeds.
-          </p>
-          <button type="button" className="ghost-button" onClick={() => setSettingsOpen(true)}>
-            Settings
-          </button>
+          <div className="library-actions">
+            <button type="button" className="ghost-button" onClick={() => setInfoOpen((v) => !v)}>
+              {infoOpen ? 'Hide info' : 'Import info'}
+            </button>
+            <button type="button" className="primary-button" onClick={() => setSettingsOpen(true)}>
+              Settings
+            </button>
+          </div>
         </header>
+        {infoOpen ? (
+          <div className="library-info muted">
+            <p>
+              Import a text to begin practicing word-order recall. Each line becomes a sentence and
+              stays deterministic thanks to per-sentence seeds.
+            </p>
+            <p>
+              Title on line 1, optional <code>lang=&lt;tag&gt;</code> on line 2, sentences after that.
+              We store everything locally in your browser (Dexie).
+            </p>
+          </div>
+        ) : null}
         {renderLibraryContents(texts)}
       </section>
       <TextImportPanel />

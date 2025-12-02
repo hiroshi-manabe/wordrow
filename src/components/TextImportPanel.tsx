@@ -15,6 +15,7 @@ export default function TextImportPanel({ onImported }: TextImportPanelProps) {
   const [fileName, setFileName] = useState<string | null>(null)
   const [status, setStatus] = useState<Status>('idle')
   const [message, setMessage] = useState('Paste a UTF-8 text file or select one to import.')
+  const [showHelp, setShowHelp] = useState(false)
 
   const handleFileSelection = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -64,10 +65,11 @@ export default function TextImportPanel({ onImported }: TextImportPanelProps) {
           <p className="eyebrow">Import</p>
           <h2>Bring your own text</h2>
         </div>
-        <p className="section-description">
-          Line 1 is the title. Line 2 optionally starts with <code>lang=&lt;tag&gt;</code>. Every
-          following line is a sentence (no auto-segmentation).
-        </p>
+        <div className="library-actions">
+          <button type="button" className="ghost-button" onClick={() => setShowHelp((v) => !v)}>
+            {showHelp ? 'Hide guide' : 'Import guide'}
+          </button>
+        </div>
       </header>
       <form className="import-form" onSubmit={handleSubmit}>
         <label htmlFor={textareaId} className="input-label">
@@ -78,10 +80,22 @@ export default function TextImportPanel({ onImported }: TextImportPanelProps) {
           className="import-textarea"
           placeholder={'My Text\nlang=en\nSentence one.\nSentence two.'}
           spellCheck={false}
-          rows={10}
+          rows={6}
           value={rawInput}
           onChange={(event) => setRawInput(event.target.value)}
         />
+        {showHelp ? (
+          <div className="import-help muted">
+            <p>
+              Line 1 is the title. Line 2 optionally starts with <code>lang=&lt;tag&gt;</code>. Every
+              following line is a sentence (no auto-segmentation).
+            </p>
+            <p>
+              You can paste or pick a .txt file; this box is just for review/editing before you
+              import.
+            </p>
+          </div>
+        ) : null}
         <div className="import-controls">
           <label className="file-input">
             <input type="file" accept=".txt" onChange={handleFileSelection} />
