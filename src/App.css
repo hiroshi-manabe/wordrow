@@ -136,8 +136,9 @@
 
 .text-card__actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.4rem;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .text-card__button {
@@ -151,6 +152,24 @@
   .text-card__button {
     flex: 1 1 45%;
   }
+}
+
+.text-preview {
+  margin-top: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.text-preview__line {
+  margin: 0;
+  color: rgba(243, 246, 255, 0.85);
+  font-size: 0.95rem;
+  line-height: 1.4;
 }
 
 .primary-button,

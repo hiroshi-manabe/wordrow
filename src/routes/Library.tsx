@@ -7,6 +7,7 @@ import { db } from '../storage/db'
 import { useSettingsStore } from '../features/settings/store'
 import type { InputMode } from '../features/settings/types'
 import { deleteTextById } from '../storage/delete-text'
+import { InfoIcon, PlayIcon, StatsIcon, TrashIcon } from '../assets/icons'
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, {
   dateStyle: 'medium',
@@ -17,6 +18,8 @@ export default function LibraryRoute() {
   const texts = useLiveQuery(() => db.texts.orderBy('updatedAt').reverse().toArray(), [])
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [infoOpen, setInfoOpen] = useState(false)
+  const [showImport, setShowImport] = useState(false)
+  const [previewId, setPreviewId] = useState<string | null>(null)
 
   return (
     <div className="library-grid">
@@ -33,6 +36,13 @@ export default function LibraryRoute() {
             <button type="button" className="primary-button" onClick={() => setSettingsOpen(true)}>
               Settings
             </button>
+            <button
+              type="button"
+              className="primary-button"
+              onClick={() => setShowImport((v) => !v)}
+            >
+              {showImport ? 'Hide import' : 'Import text'}
+            </button>
           </div>
         </header>
         {infoOpen ? (
@@ -47,15 +57,19 @@ export default function LibraryRoute() {
             </p>
           </div>
         ) : null}
-        {renderLibraryContents(texts)}
+        {renderLibraryContents(texts, previewId, setPreviewId)}
       </section>
-      <TextImportPanel />
+      {showImport ? <TextImportPanel /> : null}
       {settingsOpen ? <SettingsModal onClose={() => setSettingsOpen(false)} /> : null}
     </div>
   )
 }
 
-function renderLibraryContents(texts: TextRecord[] | undefined) {
+function renderLibraryContents(
+  texts: TextRecord[] | undefined,
+  previewId: string | null,
+  setPreviewId: (id: string | null) => void,
+) {
   if (!texts) {
     return <p className="muted">Loading texts…</p>
   }
@@ -76,14 +90,23 @@ function renderLibraryContents(texts: TextRecord[] | undefined) {
             <p className="text-card__meta">Updated {dateFormatter.format(new Date(text.updatedAt))}</p>
           </div>
           <div className="text-card__actions">
-            <Link to={`/play/${text.id}`} className="primary-button text-card__button">
-              Play
+            <Link to={`/play/${text.id}`} className="icon-button ghost-button" aria-label="Play text">
+              <PlayIcon size={18} />
             </Link>
-            <Link to={`/stats/${text.id}`} className="ghost-button text-card__button">
-              Stats
+            <button
+              type="button"
+              className="icon-button ghost-button"
+              aria-label="Preview text"
+              onClick={() => setPreviewId(previewId === text.id ? null : text.id)}
+            >
+              <InfoIcon size={18} />
+            </button>
+            <Link to={`/stats/${text.id}`} className="icon-button ghost-button" aria-label="Stats">
+              <StatsIcon size={18} />
             </Link>
             <DeleteButton textId={text.id} />
           </div>
+          {previewId === text.id ? <TextPreview textId={text.id} /> : null}
         </li>
       ))}
     </ul>
@@ -149,8 +172,30 @@ function DeleteButton({ textId }: { textId: string }) {
   }
 
   return (
-    <button type="button" className="ghost-button text-card__button" onClick={handleDelete}>
-      Delete
+    <button
+      type="button"
+      className="icon-button ghost-button"
+      aria-label="Delete text"
+      onClick={handleDelete}
+    >
+      <TrashIcon size={18} />
     </button>
+  )
+}
+
+function TextPreview({ textId }: { textId: string }) {
+  const sentences = useLiveQuery(
+    () => db.sentences.where('textId').equals(textId).limit(3).toArray(),
+    [textId],
+  )
+  if (!sentences?.length) return null
+  return (
+    <div className="text-preview">
+      {sentences.map((s) => (
+        <p key={s.id} className="text-preview__line">
+          {s.surfaceTokens.join(' ')}
+        </p>
+      ))}
+    </div>
   )
 }
