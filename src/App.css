@@ -138,6 +138,15 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.text-card__row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
 }
 
 .text-card__meta {
@@ -151,6 +160,19 @@
   gap: 0.4rem;
   flex-wrap: wrap;
   align-items: center;
+}
+
+.text-card__actions--inline {
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+  justify-content: flex-start;
+  min-width: 0;
+}
+
+@media (max-width: 400px) {
+  .text-card__actions--inline {
+    gap: 0.35rem;
+  }
 }
 
 .text-card__button {

@@ -98,25 +98,25 @@ function renderLibraryContents(
     <ul className="text-list">
       {texts.map((text) => (
         <li key={text.id} className="text-card">
-          <div>
+          <div className="text-card__row">
             <p className="text-card__title text-card__title--truncate">{text.title}</p>
-          </div>
-          <div className="text-card__actions">
-            <Link to={`/play/${text.id}`} className="icon-button ghost-button" aria-label="Play text">
-              <PlayIcon size={18} />
-            </Link>
-            <button
-              type="button"
-              className="icon-button ghost-button"
-              aria-label="Preview text"
-              onClick={() => setPreviewId(previewId === text.id ? null : text.id)}
-            >
-              <InfoIcon size={18} />
-            </button>
-            <Link to={`/stats/${text.id}`} className="icon-button ghost-button" aria-label="Stats">
-              <StatsIcon size={18} />
-            </Link>
-            <DeleteButton textId={text.id} />
+            <div className="text-card__actions text-card__actions--inline">
+              <Link to={`/play/${text.id}`} className="icon-button ghost-button" aria-label="Play text">
+                <PlayIcon size={18} />
+              </Link>
+              <button
+                type="button"
+                className="icon-button ghost-button"
+                aria-label="Preview text"
+                onClick={() => setPreviewId(previewId === text.id ? null : text.id)}
+              >
+                <InfoIcon size={18} />
+              </button>
+              <Link to={`/stats/${text.id}`} className="icon-button ghost-button" aria-label="Stats">
+                <StatsIcon size={18} />
+              </Link>
+              <DeleteButton textId={text.id} />
+            </div>
           </div>
           {previewId === text.id ? <TextPreview text={text} /> : null}
         </li>
