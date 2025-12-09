@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="refresh" content="0; url=/" />
+    <title>Redirecting…</title>
+  </head>
+  <body>
+    <script>
+      // GitHub Pages SPA fallback: route all paths back to index.html
+      ;(function () {
+        var l = window.location
+        var redirectBase = (l.origin || '') + (l.pathname.startsWith('/wordrow') ? '/wordrow/' : '/')
+        l.replace(redirectBase + (l.search || '') + (l.hash || ''))
+      })()
+    </script>
+  </body>
+  </html>
